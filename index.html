@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WISTORIA CRAFT</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+  :root {
+    --gold: #f5c842;
+    --blue-magic: #4fc3f7;
+    --purple-magic: #ce93d8;
+    --red-magic: #ef5350;
+    --dark: #0a0a14;
+    --panel: #1a1a2e;
+    --panel2: #16213e;
+    --green: #66bb6a;
+    --dirt: #8b6340;
+    --stone: #888;
+    --sky: #1a3a5c;
+    --health: #e53935;
+    --mana: #1e88e5;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; image-rendering: pixelated; }
+
+  body {
+    background: var(--dark);
+    font-family: 'Press Start 2P', monospace;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  #menu-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(180deg, #0a0a14 0%, #1a1a2e 60%, #0d1b2a 100%);
+    position: absolute;
+    z-index: 100;
+  }
+
+  #menu-screen canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  .menu-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(18px, 3vw, 36px);
+    color: var(--gold);
+    text-shadow: 0 0 20px #f5c84288, 4px 4px 0 #7a6000;
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+    z-index: 1;
+    animation: titlePulse 2s ease-in-out infinite;
+  }
+
+  .menu-sub {
+    font-family: 'VT323', monospace;
+    font-size: clamp(16px, 2vw, 24px);
+    color: var(--blue-magic);
+    text-shadow: 0 0 10px #4fc3f7aa;
+    margin-bottom: 48px;
+    z-index: 1;
+    letter-spacing: 6px;
+  }
+
+  @keyframes titlePulse {
+    0%,100% { text-shadow: 0 0 20px #f5c84288, 4px 4px 0 #7a6000; }
+    50% { text-shadow: 0 0 40px #f5c842cc, 4px 4px 0 #7a6000; }
+  }
+
+  .menu-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(10px, 1.5vw, 14px);
+    color: var(--dark);
+    background: var(--gold);
+    border: none;
+    padding: 14px 32px;
+    cursor: pointer;
+    margin: 8px;
+    z-index: 1;
+    transition: all 0.1s;
+    box-shadow: 4px 4px 0 #7a6000;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+
+  .menu-btn:hover {
+    background: #ffe082;
+    transform: translate(-2px,-2px);
+    box-shadow: 6px 6px 0 #7a6000;
+  }
+
+  .menu-btn:active {
+    transform: translate(2px,2px);
+    box-shadow: 2px 2px 0 #7a6000;
+  }
+
+  #game-screen {
+    display: none;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+  }
+
+  #hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: rgba(10,10,20,0.92);
+    border-bottom: 2px solid var(--gold);
+    flex-wrap: wrap;
+    gap: 6px;
+    z-index: 10;
+  }
+
+  .hud-left { display: flex; flex-direction: column; gap: 4px; }
+  .hud-center { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .hud-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+
+  .bar-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #aaa;
+  }
+
+  .bar-outer {
+    width: 140px;
+    height: 12px;
+    background: #111;
+    border: 2px solid #333;
+    position: relative;
+  }
+
+  .bar-inner {
+    height: 100%;
+    transition: width 0.2s;
+  }
+
+  .bar-hp { background: linear-gradient(90deg, #b71c1c, var(--health)); }
+  .bar-mp { background: linear-gradient(90deg, #0d47a1, var(--mana)); }
+
+  .player-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--gold);
+  }
+
+  .level-badge {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--dark);
+    background: var(--gold);
+    padding: 2px 8px;
+  }
+
+  #spell-bar {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .spell-slot {
+    width: 40px;
+    height: 40px;
+    background: var(--panel2);
+    border: 2px solid #444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.1s;
+  }
+
+  .spell-slot.active { border-color: var(--gold); box-shadow: 0 0 8px var(--gold); }
+  .spell-slot:hover { border-color: var(--blue-magic); }
+
+  .spell-key {
+    position: absolute;
+    bottom: 1px; right: 3px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 5px;
+    color: #888;
+  }
+
+  #canvas-wrapper {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #gameCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    image-rendering: pixelated;
+  }
+
+  #inventory-panel {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    background: rgba(10,10,20,0.97);
+    border: 3px solid var(--gold);
+    padding: 20px;
+    z-index: 50;
+    min-width: 320px;
+  }
+
+  .inv-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--gold);
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  .inv-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 36px);
+    gap: 4px;
+  }
+
+  .inv-slot {
+    width: 36px;
+    height: 36px;
+    background: var(--panel2);
+    border: 2px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .inv-slot:hover { border-color: var(--gold); }
+
+  .inv-count {
+    position: absolute;
+    bottom: 1px; right: 3px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    color: white;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  #hotbar {
+    display: flex;
+    justify-content: center;
+    padding: 4px;
+    background: rgba(10,10,20,0.92);
+    border-top: 2px solid var(--gold);
+    gap: 4px;
+  }
+
+  .hotbar-slot {
+    width: 44px;
+    height: 44px;
+    background: var(--panel2);
+    border: 2px solid #444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    position: relative;
+    flex-direction: column;
+  }
+
+  .hotbar-slot.active { border-color: var(--gold); box-shadow: 0 0 10px var(--gold); }
+  .hotbar-slot-key {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 5px;
+    color: #666;
+  }
+
+  #msg-log {
+    position: absolute;
+    bottom: 60px;
+    left: 8px;
+    width: 240px;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .msg {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: #eee;
+    text-shadow: 1px 1px 0 #000;
+    opacity: 1;
+    animation: fadeMsg 3s forwards;
+    line-height: 1.3;
+  }
+
+  @keyframes fadeMsg {
+    0%,70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  #tooltip {
+    position: absolute;
+    background: rgba(10,10,20,0.95);
+    border: 2px solid var(--gold);
+    padding: 8px 12px;
+    font-family: 'VT323', monospace;
+    font-size: 15px;
+    color: white;
+    pointer-events: none;
+    z-index: 200;
+    display: none;
+    max-width: 180px;
+  }
+
+  #death-screen {
+    display: none;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    z-index: 90;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .death-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(20px, 4vw, 40px);
+    color: var(--health);
+    text-shadow: 0 0 30px #ef535088;
+    animation: deathPulse 1s ease-in-out infinite;
+  }
+
+  @keyframes deathPulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .controls-hint {
+    position: absolute;
+    bottom: 60px;
+    right: 8px;
+    background: rgba(10,10,20,0.85);
+    border: 1px solid #333;
+    padding: 6px 10px;
+    font-family: 'VT323', monospace;
+    font-size: 13px;
+    color: #888;
+    line-height: 1.6;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .magic-circle {
+    position: absolute;
+    pointer-events: none;
+    z-index: 4;
+    animation: mcSpin 0.5s linear infinite;
+  }
+
+  @keyframes mcSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  #xp-bar-outer {
+    width: 140px;
+    height: 6px;
+    background: #111;
+    border: 1px solid #333;
+  }
+  #xp-bar-inner {
+    height: 100%;
+    background: linear-gradient(90deg, #2e7d32, var(--green));
+    transition: width 0.3s;
+  }
+</style>
+</head>
+<body>
+
+<!-- MENU -->
+<div id="menu-screen">
+  <canvas id="menuCanvas"></canvas>
+  <div class="menu-title">✦ WISTORIA CRAFT ✦</div>
+  <div class="menu-sub">VARETA & ESPADA</div>
+  <button class="menu-btn" onclick="startGame()">▶ INICIAR JOGO</button>
+  <button class="menu-btn" onclick="showControls()">📖 CONTROLES</button>
+  <div id="controls-popup" style="display:none;margin-top:16px;background:rgba(10,10,20,0.95);border:2px solid var(--gold);padding:16px;z-index:2;max-width:360px;">
+    <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:var(--gold);margin-bottom:10px;">CONTROLES</div>
+    <div style="font-family:'VT323',monospace;font-size:16px;color:#ccc;line-height:2;">
+      A / D — Mover<br>
+      W / Espaço — Pular<br>
+      Mouse — Apontar / Atacar<br>
+      Click Esq — Minerar / Atacar<br>
+      Click Dir — Colocar Bloco<br>
+      1-5 — Selecionar Hotbar<br>
+      Q,E,R,F — Feitiços<br>
+      I — Inventário<br>
+      ESC — Pause
+    </div>
+    <button class="menu-btn" style="margin-top:10px;font-size:8px;" onclick="document.getElementById('controls-popup').style.display='none'">FECHAR</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game-screen">
+  <div id="hud">
+    <div class="hud-left">
+      <div class="player-name">✦ WILL SERFORT</div>
+      <div class="bar-label">HP</div>
+      <div class="bar-outer"><div class="bar-inner bar-hp" id="hp-bar" style="width:100%"></div></div>
+      <div class="bar-label">MP</div>
+      <div class="bar-outer"><div class="bar-inner bar-mp" id="mp-bar" style="width:100%"></div></div>
+      <div id="xp-bar-outer"><div id="xp-bar-inner" style="width:0%"></div></div>
+    </div>
+    <div class="hud-center">
+      <div class="level-badge" id="level-badge">LV 1</div>
+      <div id="spell-bar">
+        <div class="spell-slot active" id="spell0" title="Faísca de Fogo" onclick="selectSpell(0)">🔥<span class="spell-key">Q</span></div>
+        <div class="spell-slot" id="spell1" title="Rajada de Gelo" onclick="selectSpell(1)">❄️<span class="spell-key">E</span></div>
+        <div class="spell-slot" id="spell2" title="Relâmpago" onclick="selectSpell(2)">⚡<span class="spell-key">R</span></div>
+        <div class="spell-slot" id="spell3" title="Escudo Arcano" onclick="selectSpell(3)">🛡️<span class="spell-key">F</span></div>
+      </div>
+      <div style="font-family:'VT323',monospace;font-size:13px;color:#888;" id="spell-name">Faísca de Fogo</div>
+    </div>
+    <div class="hud-right">
+      <div style="font-family:'VT323',monospace;font-size:14px;color:var(--gold);" id="score-display">⚡ MANA: 100</div>
+      <div style="font-family:'VT323',monospace;font-size:13px;color:#aaa;" id="depth-display">🌍 Y: 0</div>
+      <div style="font-family:'VT323',monospace;font-size:13px;color:var(--green);" id="kills-display">☠ Mortes: 0</div>
+    </div>
+  </div>
+
+  <div id="canvas-wrapper">
+    <canvas id="gameCanvas"></canvas>
+    <div id="msg-log"></div>
+    <div class="controls-hint">
+      A/D Mover | W/ESPAÇO Pular<br>
+      Click Esq Atacar/Minerar<br>
+      Click Dir Colocar Bloco<br>
+      1-5 Hotbar | Q/E/R/F Feitiços<br>
+      I Inventário
+    </div>
+    <div id="tooltip"></div>
+    <div id="death-screen">
+      <div class="death-title">💀 VOCÊ MORREU 💀</div>
+      <div style="font-family:'VT323',monospace;font-size:20px;color:#aaa;" id="death-stats"></div>
+      <button class="menu-btn" onclick="respawn()">↺ RENASCER</button>
+      <button class="menu-btn" onclick="backToMenu()">🏠 MENU</button>
+    </div>
+  </div>
+
+  <div id="hotbar">
+    <div class="hotbar-slot active" id="hb0"><span class="hotbar-slot-icon">⛏️</span><span class="hotbar-slot-key">1</span></div>
+    <div class="hotbar-slot" id="hb1"><span class="hotbar-slot-icon">🪓</span><span class="hotbar-slot-key">2</span></div>
+    <div class="hotbar-slot" id="hb2"><span class="hotbar-slot-icon">🗡️</span><span class="hotbar-slot-key">3</span></div>
+    <div class="hotbar-slot" id="hb3"><span class="hotbar-slot-icon">🌿</span><span class="hotbar-slot-key">4</span></div>
+    <div class="hotbar-slot" id="hb4"><span class="hotbar-slot-icon">🪨</span><span class="hotbar-slot-key">5</span></div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>

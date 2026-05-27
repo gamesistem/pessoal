@@ -1,227 +1,227 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FGO JP - Database de Artes</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FGO JP - Database de Artes</title>
 
-<style>
-:root{
-    --bg:#0b0b14;
-    --card:#151526;
-    --gold:#d4af37;
-    --text:#f1f1f1;
-    --border:#2c2c45;
-    --accent:#202040;
-}
+    <!-- FAVICON E ÍCONE DO REPOSITÓRIO -->
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/gamesistem/pessoal/main/flavicon.png">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/gamesistem/pessoal/main/flavicon.png">
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
+    <style>
+        :root {
+            --bg: #0b0b14;
+            --card: #151526;
+            --gold: #d4af37;
+            --text: #f1f1f1;
+            --border: #2c2c45;
+            --accent: #202040;
+        }
 
-body{
-    background:var(--bg);
-    color:var(--text);
-    font-family:Segoe UI,Arial,sans-serif;
-}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-/* HEADER */
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: Segoe UI, Arial, sans-serif;
+        }
 
-header{
-    position:sticky;
-    top:0;
-    z-index:100;
-    background:var(--card);
-    border-bottom:2px solid var(--gold);
-    padding:15px;
-    box-shadow:0 5px 15px rgba(0,0,0,.4);
-}
+        /* HEADER */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--card);
+            border-bottom: 2px solid var(--gold);
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,.4);
+        }
 
-.controls{
-    max-width:1400px;
-    margin:auto;
-    display:flex;
-    flex-direction:column;
-    gap:15px;
-}
+        .controls {
+            max-width: 1400px;
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
 
-.search-box{
-    width:100%;
-    padding:14px;
-    border:none;
-    border-radius:10px;
-    background:#0f0f1c;
-    color:white;
-    font-size:1rem;
-    outline:none;
-    border:1px solid var(--border);
-}
+        .search-box {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: #0f0f1c;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            border: 1px solid var(--border);
+        }
 
-.search-box:focus{
-    border-color:var(--gold);
-}
+        .search-box:focus {
+            border-color: var(--gold);
+        }
 
-.class-filters{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-}
+        .class-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
 
-.filter-btn{
-    background:var(--accent);
-    border:1px solid var(--border);
-    color:#ddd;
-    padding:8px 12px;
-    border-radius:8px;
-    cursor:pointer;
-    transition:.2s;
-}
+        .filter-btn {
+            background: var(--accent);
+            border: 1px solid var(--border);
+            color: #ddd;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: .2s;
+        }
 
-.filter-btn:hover,
-.filter-btn.active{
-    background:var(--gold);
-    color:black;
-    font-weight:bold;
-}
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: var(--gold);
+            color: black;
+            font-weight: bold;
+        }
 
-/* GRID */
+        /* GRID */
+        .container {
+            max-width: 1450px;
+            margin: auto;
+            padding: 25px;
+        }
 
-.container{
-    max-width:1450px;
-    margin:auto;
-    padding:25px;
-}
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 20px;
+        }
 
-.results-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
-    gap:20px;
-}
+        .servant-card {
+            background: var(--card);
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: .25s;
+            cursor: pointer;
+            position: relative;
+        }
 
-.servant-card{
-    background:var(--card);
-    border-radius:14px;
-    overflow:hidden;
-    border:1px solid var(--border);
-    transition:.25s;
-    cursor:pointer;
-    position:relative;
-}
+        .servant-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--gold);
+        }
 
-.servant-card:hover{
-    transform:translateY(-5px);
-    border-color:var(--gold);
-}
+        .card-img-container {
+            width: 100%;
+            aspect-ratio: 3/4;
+            background: black;
+        }
 
-.card-img-container{
-    width:100%;
-    aspect-ratio:3/4;
-    background:black;
-}
+        .card-img-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
 
-.card-img-container img{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    display:block;
-}
+        .card-info {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(to top, rgba(0,0,0,.95), transparent);
+        }
 
-.card-info{
-    position:absolute;
-    bottom:0;
-    width:100%;
-    padding:12px;
-    background:linear-gradient(to top,rgba(0,0,0,.95),transparent);
-}
+        .card-name {
+            font-weight: bold;
+            font-size: .9rem;
+        }
 
-.card-name{
-    font-weight:bold;
-    font-size:.9rem;
-}
+        .card-class {
+            color: var(--gold);
+            font-size: .75rem;
+            margin-top: 4px;
+        }
 
-.card-class{
-    color:var(--gold);
-    font-size:.75rem;
-    margin-top:4px;
-}
+        #status {
+            text-align: center;
+            color: var(--gold);
+            padding: 50px;
+            font-size: 1.2rem;
+        }
 
-#status{
-    text-align:center;
-    color:var(--gold);
-    padding:50px;
-    font-size:1.2rem;
-}
+        /* MODAL */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.92);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
 
-/* MODAL */
+        .modal-overlay.active {
+            display: flex;
+        }
 
-.modal-overlay{
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.92);
-    z-index:999;
-    justify-content:center;
-    align-items:center;
-    padding:20px;
-}
+        .modal-content {
+            width: 100%;
+            max-width: 950px;
+            max-height: 95vh;
+            overflow-y: auto;
+            background: var(--card);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
 
-.modal-overlay.active{
-    display:flex;
-}
+        .close-btn {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+        }
 
-.modal-content{
-    width:100%;
-    max-width:950px;
-    max-height:95vh;
-    overflow-y:auto;
-    background:var(--card);
-    border-radius:16px;
-    padding:20px;
-    text-align:center;
-    position:relative;
-}
+        .main-art-full {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
 
-.close-btn{
-    position:absolute;
-    right:20px;
-    top:10px;
-    background:none;
-    border:none;
-    color:white;
-    font-size:2rem;
-    cursor:pointer;
-}
+        .asc-tabs {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
 
-.main-art-full{
-    max-width:100%;
-    max-height:70vh;
-    border-radius:10px;
-    margin-top:10px;
-}
-
-.asc-tabs{
-    display:flex;
-    justify-content:center;
-    flex-wrap:wrap;
-    gap:10px;
-    margin-top:20px;
-}
-
-@media(max-width:700px){
-    .results-grid{
-        grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
-    }
-}
-</style>
+        @media(max-width:700px){
+            .results-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+    </style>
 </head>
 
 <body>
 
 <header>
     <div class="controls">
-
         <input
             type="text"
             id="searchInput"
@@ -234,47 +234,31 @@ header{
                 Todos
             </button>
         </div>
-
     </div>
 </header>
 
 <div class="container">
-
     <div id="status">
         Carregando Servos JP...
     </div>
-
     <div class="results-grid" id="resultsGrid"></div>
-
 </div>
 
 <!-- MODAL -->
-
 <div class="modal-overlay" id="modalOverlay">
-
     <div class="modal-content">
-
         <button class="close-btn" id="closeBtn">
             &times;
         </button>
-
         <h2 id="modalName" style="color:var(--gold);"></h2>
-
         <img id="mainArt" class="main-art-full">
-
         <div class="asc-tabs" id="ascTabs"></div>
-
     </div>
-
 </div>
 
 <script>
-
-const API_LIST =
-'https://api.atlasacademy.io/export/JP/basic_servant_lang_en.json';
-
-const API_DETAIL =
-'https://api.atlasacademy.io/nice/JP/servant/';
+const API_LIST = 'https://api.atlasacademy.io/export/JP/basic_servant_lang_en.json';
+const API_DETAIL = 'https://api.atlasacademy.io/nice/JP/servant/';
 
 let allServants = [];
 let currentClass = 'all';
@@ -282,13 +266,9 @@ let currentClass = 'all';
 /* =========================================
    INIT
 ========================================= */
-
 async function init(){
-
-    try{
-
+    try {
         const response = await fetch(API_LIST);
-
         const data = await response.json();
 
         allServants = data.filter(s =>
@@ -297,52 +277,32 @@ async function init(){
         );
 
         document.getElementById('status').style.display = 'none';
-
         createClassFilters();
-
         renderGrid();
 
-    }catch(err){
-
+    } catch(err) {
         console.error(err);
-
-        document.getElementById('status').innerText =
-        'Erro ao carregar Atlas Academy JP.';
+        document.getElementById('status').innerText = 'Erro ao carregar Atlas Academy JP.';
     }
 }
 
 /* =========================================
    FILTROS
 ========================================= */
-
 function createClassFilters(){
-
-    const classes =
-    [...new Set(allServants.map(s => s.className))]
-    .sort();
-
-    const container =
-    document.getElementById('classFilters');
+    const classes = [...new Set(allServants.map(s => s.className))].sort();
+    const container = document.getElementById('classFilters');
 
     classes.forEach(cls => {
-
         const btn = document.createElement('button');
-
         btn.className = 'filter-btn';
-
         btn.textContent = cls;
-
         btn.dataset.class = cls;
 
         btn.onclick = () => {
-
-            document.querySelectorAll('.filter-btn')
-            .forEach(b => b.classList.remove('active'));
-
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-
             currentClass = cls;
-
             renderGrid();
         };
 
@@ -353,53 +313,30 @@ function createClassFilters(){
 /* =========================================
    URL DA IMAGEM
 ========================================= */
-
 function getServantImage(servant){
-
-    // Usa face do Atlas que funciona corretamente
     if(servant.face){
-
         return servant.face;
     }
-
-    // fallback
     return `https://static.atlasacademy.io/JP/Faces/f_${servant.collectionNo}.png`;
 }
 
 /* =========================================
    GRID
 ========================================= */
-
 function renderGrid(){
-
-    const grid =
-    document.getElementById('resultsGrid');
-
-    const search =
-    document.getElementById('searchInput')
-    .value
-    .toLowerCase();
-
+    const grid = document.getElementById('resultsGrid');
+    const search = document.getElementById('searchInput').value.toLowerCase();
     grid.innerHTML = '';
 
     const filtered = allServants.filter(s => {
-
-        const classMatch =
-        currentClass === 'all' ||
-        s.className === currentClass;
-
-        const nameMatch =
-        s.name.toLowerCase().includes(search);
-
+        const classMatch = currentClass === 'all' || s.className === currentClass;
+        const nameMatch = s.name.toLowerCase().includes(search);
         return classMatch && nameMatch;
     });
 
     filtered.forEach(servant => {
-
         const card = document.createElement('div');
-
         card.className = 'servant-card';
-
         const imageUrl = getServantImage(servant);
 
         card.innerHTML = `
@@ -411,21 +348,13 @@ function renderGrid(){
                     onerror="this.src='https://static.atlasacademy.io/JP/Faces/f_1.png'"
                 >
             </div>
-
             <div class="card-info">
-                <div class="card-name">
-                    ${servant.name}
-                </div>
-
-                <div class="card-class">
-                    ${servant.className}
-                </div>
+                <div class="card-name">${servant.name}</div>
+                <div class="card-class">${servant.className}</div>
             </div>
         `;
 
-        card.onclick = () =>
-        openServant(servant.id, servant.name);
-
+        card.onclick = () => openServant(servant.id, servant.name);
         grid.appendChild(card);
     });
 }
@@ -433,74 +362,38 @@ function renderGrid(){
 /* =========================================
    MODAL
 ========================================= */
-
 async function openServant(id,name){
+    const modal = document.getElementById('modalOverlay');
+    const mainArt = document.getElementById('mainArt');
+    const tabs = document.getElementById('ascTabs');
 
-    const modal =
-    document.getElementById('modalOverlay');
-
-    const mainArt =
-    document.getElementById('mainArt');
-
-    const tabs =
-    document.getElementById('ascTabs');
-
-    document.getElementById('modalName')
-    .textContent = name;
-
+    document.getElementById('modalName').textContent = name;
     modal.classList.add('active');
-
     document.body.style.overflow = 'hidden';
-
     tabs.innerHTML = 'Carregando artes...';
 
-    try{
-
-        const response =
-        await fetch(`${API_DETAIL}${id}?lore=false`);
-
-        const servant =
-        await response.json();
-
-        const ascensions =
-        servant.extraAssets.charaGraph.ascension;
-
-        const keys =
-        Object.keys(ascensions);
+    try {
+        const response = await fetch(`${API_DETAIL}${id}?lore=false`);
+        const servant = await response.json();
+        const ascensions = servant.extraAssets.charaGraph.ascension;
+        const keys = Object.keys(ascensions);
 
         if(!keys.length){
-
-            tabs.innerHTML =
-            '<p>Sem artes disponíveis.</p>';
-
+            tabs.innerHTML = '<p>Sem artes disponíveis.</p>';
             return;
         }
 
         mainArt.src = ascensions[keys[0]];
-
         tabs.innerHTML = '';
 
         keys.forEach(key => {
-
-            const btn =
-            document.createElement('button');
-
+            const btn = document.createElement('button');
             btn.className = 'filter-btn';
-
-            btn.textContent =
-            key === '4'
-            ? 'Final'
-            : `Asc ${key}`;
+            btn.textContent = key === '4' ? 'Final' : `Asc ${key}`;
 
             btn.onclick = () => {
-
-                mainArt.src =
-                ascensions[key];
-
-                document
-                .querySelectorAll('.asc-tabs .filter-btn')
-                .forEach(b => b.classList.remove('active'));
-
+                mainArt.src = ascensions[key];
+                document.querySelectorAll('.asc-tabs .filter-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             };
 
@@ -509,50 +402,33 @@ async function openServant(id,name){
 
         tabs.firstChild.classList.add('active');
 
-    }catch(err){
-
+    } catch(err) {
         console.error(err);
-
-        tabs.innerHTML =
-        '<p>Erro ao carregar artes.</p>';
+        tabs.innerHTML = '<p>Erro ao carregar artes.</p>';
     }
 }
 
 /* =========================================
    EVENTOS
 ========================================= */
-
-document
-.getElementById('searchInput')
-.addEventListener('input',renderGrid);
-
-document
-.getElementById('closeBtn')
-.onclick = closeModal;
+document.getElementById('searchInput').addEventListener('input', renderGrid);
+document.getElementById('closeBtn').onclick = closeModal;
 
 window.onclick = (e) => {
-
     if(e.target.id === 'modalOverlay'){
-
         closeModal();
     }
 };
 
 function closeModal(){
-
-    document
-    .getElementById('modalOverlay')
-    .classList.remove('active');
-
+    document.getElementById('modalOverlay').classList.remove('active');
     document.body.style.overflow = '';
 }
 
 /* =========================================
    START
 ========================================= */
-
 init();
-
 </script>
 
 </body>

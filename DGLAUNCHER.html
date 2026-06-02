@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DGHTML Web Launcher</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #121214;
+            color: #e1e1e6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #202024;
+            padding: 2.5rem;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 450px;
+            width: 100%;
+        }
+        h1 { color: #00adb5; margin-bottom: 1.5rem; }
+        .drop-zone {
+            border: 2px dashed #00adb5;
+            padding: 2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .drop-zone:hover { background: #29292e; }
+        input[type="file"] { display: none; }
+        button {
+            margin-top: 1.5rem;
+            background: #00adb5;
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        button:hover { background: #008c95; }
+        button:disabled { background: #444; cursor: not-allowed; }
+        #status { margin-top: 1rem; color: #aaa; font-size: 0.9rem; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>DGHTML Launcher</h1>
+    <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
+        <p>Arraste seu arquivo <strong>.dghtml</strong> ou clique para buscar</p>
+        <input type="file" id="fileInput" accept=".dghtml,.zip">
+    </div>
+    <div id="status">Aguardando arquivo...</div>
+    <button id="launchBtn" disabled>Iniciar Aplicação</button>
+</div>
+
+<script>
+    let swRegistration = null;
+
+    // 1. Registrar o Service Worker assim que a página carregar
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => {
+                swRegistration = reg;
+                console.log('Service Worker registrado com sucesso!');
+            })
+            .catch(err => console.error('Erro ao registrar Service Worker:', err));
+    } else {
+        alert('Seu navegador não suporta Service Workers. O launcher não funcionará corretamente.');
+    }
+
+    const fileInput = document.getElementById('fileInput');
+    const launchBtn = document.getElementById('launchBtn');
+    const status = document.getElementById('status');
+    let appFiles = {};
+
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        status.innerText = "Processando arquivo .dghtml...";
+        launchBtn.disabled = true;
+
+        try {
+            const zip = await JSZip.loadAsync(file);
+            appFiles = {};
+            
+            // Mapear todos os arquivos do ZIP para a memória
+            const promises = [];
+            zip.forEach((relativePath, zipEntry) => {
+                if (!zipEntry.dir) {
+                    const promise = zipEntry.async('blob').then(blob => {
+                        // Salva o tipo correto de arquivo baseado na extensão
+                        let type = 'text/plain';
+                        if (relativePath.endsWith('.html')) type = 'text/html';
+                        if (relativePath.endsWith('.css')) type = 'text/css';
+                        if (relativePath.endsWith('.js')) type = 'application/javascript';
+                        if (relativePath.endsWith('.png')) type = 'image/png';
+                        if (relativePath.endsWith('.jpg') || relativePath.endsWith('.jpeg')) type = 'image/jpeg';
+                        
+                        const styledBlob = new Blob([blob], { type: type });
+                        appFiles[relativePath] = styledBlob;
+                    });
+                    promises.push(promise);
+                }
+            });
+
+            await Promise.all(promises);
+
+            // Verificar se existe um index.html na raiz ou em alguma pasta
+            const hasIndex = Object.keys(appFiles).some(path => path.endsWith('index.html'));
+
+            if (!hasIndex) {
+                status.innerText = "Erro: arquivo 'index.html' não encontrado no pacote.";
+                return;
+            }
+
+            // Enviar os arquivos extraídos para o Service Worker via MessageChannel
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SET_FILES',
+                    files: appFiles
+                });
+                status.innerText = "Pronto para iniciar!";
+                launchBtn.disabled = false;
+            } else {
+                status.innerText = "Erro: Service worker não está ativo ainda. Recarregue a página.";
+            }
+
+        } catch (err) {
+            console.error(err);
+            status.innerText = "Erro ao ler o arquivo .dghtml.";
+        }
+    });
+
+    launchBtn.addEventListener('click', () => {
+        // Encontra o caminho exato do index.html (ex: "index.html" ou "subpasta/index.html")
+        const indexPath = Object.keys(appFiles).find(path => path.endsWith('index.html'));
+        
+        // Abre o site virtual rodando sob o escopo do Service Worker
+        window.open(`/virtual-app/${indexPath}`, '_blank');
+    });
+</script>
+</body>
+</html>

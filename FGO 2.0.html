@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lore FGO - Singularidades & Lostbelts</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0e0e1a; color: #e0e0e0; }
+        header { background: #1a1a2e; padding: 1rem; text-align: center; border-bottom: 2px solid #4a4ae6; }
+        h1 { color: #cdd9ff; font-size: 1.8rem; }
+        #war-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; padding: 1.5rem; }
+        .war-card { background: #222244; border-radius: 12px; overflow: hidden; width: 280px; cursor: pointer; transition: transform 0.2s; border: 1px solid #3a3a6a; }
+        .war-card:hover { transform: scale(1.03); border-color: #6b6bf0; }
+        .war-card img { width: 100%; height: 140px; object-fit: cover; }
+        .war-info { padding: 1rem; }
+        .war-info h3 { margin-bottom: 0.3rem; color: #ffffff; }
+        .war-info p { font-size: 0.85rem; color: #b0b0d0; }
+        #quest-screen { display: none; padding: 1rem; }
+        .back-btn { background: #3d3d7a; border: none; color: white; padding: 0.5rem 1.2rem; border-radius: 6px; cursor: pointer; margin-bottom: 1rem; font-weight: bold; }
+        #quest-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .quest-item { background: #1f1f3a; padding: 0.8rem 1rem; border-radius: 8px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 1rem; }
+        .quest-item:hover { background: #2e2e5e; }
+        .quest-index { background: #5555cc; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
+        #script-screen { display: none; padding: 1rem; max-width: 700px; margin: 0 auto; }
+        .script-line { margin-bottom: 1.2rem; display: flex; gap: 0.8rem; align-items: flex-start; background: #1a1a30; padding: 0.8rem; border-radius: 10px; }
+        .speaker-icon { width: 55px; height: 55px; border-radius: 50%; background: #2a2a4a; overflow: hidden; flex-shrink: 0; }
+        .speaker-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .dialogue-content { flex: 1; }
+        .speaker-name { font-weight: bold; color: #bbbbff; margin-bottom: 0.3rem; }
+        .message { color: #f0f0f0; line-height: 1.5; }
+        .system-message { color: #aaaaaa; font-style: italic; }
+        .nav-buttons { display: flex; justify-content: space-between; margin-top: 1.5rem; }
+        .nav-btn { background: #3d3d7a; border: none; color: white; padding: 0.6rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .loading { text-align: center; padding: 2rem; color: #aaa; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📖 Lore de Fate/Grand Order</h1>
+        <p style="color:#b0b0d0; margin-top:0.3rem;">Singularidades & Lostbelts via Atlas Academy API</p>
+    </header>
+    <div id="main-screen">
+        <div id="war-list" class="loading">Carregando capítulos principais...</div>
+    </div>
+    <div id="quest-screen">
+        <button class="back-btn" onclick="showMainScreen()">← Voltar para capítulos</button>
+        <h2 id="war-title"></h2>
+        <div id="quest-list"></div>
+    </div>
+    <div id="script-screen">
+        <button class="back-btn" onclick="showQuestList()">← Voltar para missões</button>
+        <h2 id="quest-title" style="margin-bottom:1rem;"></h2>
+        <div id="script-content"></div>
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prev-phase" onclick="changePhase(-1)" disabled>Fase Anterior</button>
+            <button class="nav-btn" id="next-phase" onclick="changePhase(1)">Próxima Fase</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://api.atlasacademy.io';
+        const REGION = 'NA'; // Mude para 'JP' se desejar
+        let wars = [];
+        let currentWarId = null;
+        let quests = [];
+        let currentQuestId = null;
+        let currentQuestData = null;
+        let currentPhaseIndex = 0;
+
+        // Busca capítulos principais (tipo 1 = Main Story)
+        async function loadWars() {
+            try {
+                const res = await fetch(`${API_BASE}/nice/${REGION}/war/search?type=1&lore=false`);
+                const data = await res.json();
+                // Ordena por ID, que geralmente segue a ordem cronológica
+                wars = data.sort((a,b) => a.id - b.id);
+                renderWars();
+            } catch (e) {
+                document.getElementById('war-list').innerHTML = 'Erro ao carregar capítulos. Verifique sua conexão.';
+                console.error(e);
+            }
+        }
+
+        function renderWars() {
+            const container = document.getElementById('war-list');
+            container.innerHTML = '';
+            wars.forEach(war => {
+                const card = document.createElement('div');
+                card.className = 'war-card';
+                card.onclick = () => openWar(war.id, war.name);
+                const imgSrc = war.image || war.logo || '';
+                card.innerHTML = `
+                    ${imgSrc ? `<img src="${imgSrc}" alt="${war.name}" loading="lazy">` : '<div style="height:140px; background:#1a1a3a;"></div>'}
+                    <div class="war-info">
+                        <h3>${war.name}</h3>
+                        <p>${war.longName || ''}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function openWar(warId, warName) {
+            currentWarId = warId;
+            document.getElementById('main-screen').style.display = 'none';
+            document.getElementById('quest-screen').style.display = 'block';
+            document.getElementById('script-screen').style.display = 'none';
+            document.getElementById('war-title').textContent = warName;
+            document.getElementById('quest-list').innerHTML = '<div class="loading">Carregando missões...</div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/nice/${REGION}/war/${warId}?lore=false`);
+                const warData = await res.json();
+                quests = warData.quests || [];
+                // Filtra apenas missões principais (type 1) e ordena por questNo
+                quests = quests.filter(q => q.type === 1).sort((a,b) => a.questNo - b.questNo);
+                renderQuests();
+            } catch (e) {
+                document.getElementById('quest-list').innerHTML = 'Erro ao carregar missões.';
+                console.error(e);
+            }
+        }
+
+        function renderQuests() {
+            const container = document.getElementById('quest-list');
+            container.innerHTML = '';
+            if (quests.length === 0) {
+                container.innerHTML = '<p>Nenhuma missão principal encontrada neste capítulo.</p>';
+                return;
+            }
+            quests.forEach(q => {
+                const div = document.createElement('div');
+                div.className = 'quest-item';
+                div.onclick = () => openQuest(q.id);
+                div.innerHTML = `
+                    <span class="quest-index">${q.questNo || q.id}</span>
+                    <span>${q.name || 'Missão sem nome'}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function showMainScreen() {
+            document.getElementById('main-screen').style.display = 'block';
+            document.getElementById('quest-screen').style.display = 'none';
+            document.getElementById('script-screen').style.display = 'none';
+        }
+
+        function showQuestList() {
+            document.getElementById('quest-screen').style.display = 'block';
+            document.getElementById('script-screen').style.display = 'none';
+            if (currentWarId) renderQuests(); // recarrega lista se necessário
+        }
+
+        async function openQuest(questId) {
+            currentQuestId = questId;
+            document.getElementById('quest-screen').style.display = 'none';
+            document.getElementById('script-screen').style.display = 'block';
+            document.getElementById('script-content').innerHTML = '<div class="loading">Carregando script...</div>';
+            try {
+                const res = await fetch(`${API_BASE}/nice/${REGION}/quest/${questId}?lore=true`);
+                currentQuestData = await res.json();
+                currentPhaseIndex = 0;
+                renderPhase();
+            } catch (e) {
+                document.getElementById('script-content').innerHTML = 'Erro ao carregar script.';
+                console.error(e);
+            }
+        }
+
+        function renderPhase() {
+            if (!currentQuestData) return;
+            const phases = currentQuestData.phases || [];
+            if (phases.length === 0) {
+                document.getElementById('script-content').innerHTML = '<p>Esta missão não possui texto (pode ser batalha pura).</p>';
+                updateNavButtons();
+                return;
+            }
+            if (currentPhaseIndex < 0) currentPhaseIndex = 0;
+            if (currentPhaseIndex >= phases.length) currentPhaseIndex = phases.length - 1;
+
+            const phase = phases[currentPhaseIndex];
+            document.getElementById('quest-title').textContent = 
+                `${currentQuestData.name || 'Missão'} - Fase ${currentPhaseIndex + 1}/${phases.length}`;
+            
+            const container = document.getElementById('script-content');
+            container.innerHTML = '';
+            const scripts = phase.scripts || [];
+            // Pega todas as linhas de todos os scripts da fase
+            let allLines = [];
+            scripts.forEach(sc => {
+                if (sc.lines) allLines = allLines.concat(sc.lines);
+            });
+
+            if (allLines.length === 0) {
+                container.innerHTML = '<p class="system-message">Nenhum diálogo nesta fase.</p>';
+                updateNavButtons();
+                return;
+            }
+
+            allLines.forEach(line => {
+                const div = document.createElement('div');
+                div.className = 'script-line';
+
+                // Mensagens do tipo diálogo ou narração
+                if (line.type === 'message' && line.message) {
+                    const isSystem = line.name === '' || !line.name;
+                    const iconDiv = document.createElement('div');
+                    iconDiv.className = 'speaker-icon';
+                    if (!isSystem && line.svtId) {
+                        // URL do ícone facial do servant
+                        const faceUrl = `https://assets.atlasacademy.io/GameData/${REGION}/Faces/f_servantFace_${line.svtId}.png`;
+                        iconDiv.innerHTML = `<img src="${faceUrl}" alt="${line.name}" onerror="this.style.display='none'">`;
+                    } else {
+                        iconDiv.innerHTML = ''; // sem ícone para sistema
+                    }
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'dialogue-content';
+                    const nameSpan = document.createElement('div');
+                    nameSpan.className = 'speaker-name';
+                    nameSpan.textContent = isSystem ? '— Sistema —' : line.name;
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = 'message';
+                    msgDiv.textContent = line.message;
+
+                    contentDiv.appendChild(nameSpan);
+                    contentDiv.appendChild(msgDiv);
+                    div.appendChild(iconDiv);
+                    div.appendChild(contentDiv);
+                } else if (line.type === 'choice' && line.message) {
+                    // Escolhas (exibir como sistema)
+                    div.innerHTML = `<span class="system-message">⚡ Escolha: ${line.message}</span>`;
+                } else {
+                    // Outros tipos (batalhas, etc.) podem ser ignorados
+                    return;
+                }
+                container.appendChild(div);
+            });
+
+            updateNavButtons();
+        }
+
+        function updateNavButtons() {
+            const phases = currentQuestData?.phases || [];
+            document.getElementById('prev-phase').disabled = currentPhaseIndex <= 0;
+            document.getElementById('next-phase').disabled = currentPhaseIndex >= phases.length - 1;
+        }
+
+        function changePhase(delta) {
+            if (!currentQuestData) return;
+            const phases = currentQuestData.phases || [];
+            currentPhaseIndex = Math.max(0, Math.min(phases.length - 1, currentPhaseIndex + delta));
+            renderPhase();
+        }
+
+        // Inicia o app
+        loadWars();
+    </script>
+</body>
+</html>

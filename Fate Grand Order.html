@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FGO Lore Explorer - Atlas Academy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
+
+    <header class="bg-gray-800 border-b border-gray-700 p-6 sticky top-0 z-50 shadow-md">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <h1 class="text-2xl font-bold tracking-wider text-yellow-500">🌌 FGO LORE EXPLORER</h1>
+            <div class="flex gap-4">
+                <button onclick="filterWars('singularity')" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold transition">Singularidades</button>
+                <button onclick="filterWars('lostbelt')" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded font-semibold transition">Lostbelts</button>
+                <button onclick="loadAllWars()" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded font-semibold transition">Todos</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <section class="lg:col-span-1 bg-gray-800 p-4 rounded-lg shadow h-[80vh] overflow-y-auto">
+            <h2 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2 text-yellow-400">Capítulos</h2>
+            <div id="loading-list" class="text-center py-4">Carregando capítulos...</div>
+            <div id="war-list" class="space-y-2 hidden"></div>
+        </section>
+
+        <section id="lore-details" class="lg:col-span-2 bg-gray-800 p-6 rounded-lg shadow h-[80vh] overflow-y-auto flex flex-col justify-center items-center text-center">
+            <div id="default-message">
+                <svg class="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                <p class="text-gray-400 text-lg">Selecione um capítulo ao lado para ver os detalhes da história e suas Quests.</p>
+            </div>
+            <div id="details-content" class="w-full text-left hidden">
+                </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Usando a API na região do servidor NA (pode mudar para 'jp' se preferir)
+        const API_BASE = 'https://api.atlasacademy.io/export/NA';
+        let allWars = [];
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAllWars();
+        });
+
+        // Busca todas as "Wars" (Capítulos do jogo)
+        async function loadAllWars() {
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_BASE}/basic_war.json`);
+                allWars = await response.json();
+                
+                // Ordena por ID para ficar na ordem cronológica do jogo
+                allWars.sort((a, b) => a.id - b.id);
+                
+                renderWarList(allWars);
+            } catch (error) {
+                console.error("Erro ao buscar dados da API:", error);
+                document.getElementById('loading-list').innerText = "Erro ao carregar dados.";
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showLoading(isLoading) {
+            const loader = document.getElementById('loading-list');
+            const list = document.getElementById('war-list');
+            if (isLoading) {
+                loader.classList.remove('hidden');
+                list.classList.add('hidden');
+            } else {
+                loader.classList.add('hidden');
+                list.classList.remove('hidden');
+            }
+        }
+
+        // Renderiza a lista lateral
+        function renderWarList(wars) {
+            const listContainer = document.getElementById('war-list');
+            listContainer.innerHTML = '';
+
+            wars.forEach(war => {
+                // Filtra eventos temporários muito genéricos, focando na história principal
+                if (war.name.includes("E-") || war.name.includes("M-")) return; 
+
+                const button = document.createElement('button');
+                button.className = "w-full text-left p-3 rounded bg-gray-700 hover:bg-gray-600 transition flex items-center gap-3 border border-transparent hover:border-gray-500";
+                button.onclick = () => loadWarDetails(war.id);
+
+                // Banner/Ícone do mapa fornecido pela API
+                const iconUrl = war.banner || 'https://via.placeholder.com/50x50?text=FGO';
+
+                button.innerHTML = `
+                    <img src="${iconUrl}" alt="Banner" class="w-12 h-12 object-cover rounded border border-gray-600">
+                    <div class="overflow-hidden">
+                        <p class="text-sm font-bold text-yellow-500 truncate">${war.originalName}</p>
+                        <p class="text-xs text-gray-300 truncate">${war.name}</p>
+                    </div>
+                `;
+                listContainer.appendChild(button);
+            });
+        }
+
+        // Filtros básicos baseados no nome original (Singularity / Lostbelt)
+        function filterWars(type) {
+            let filtered = allWars;
+            if (type === 'singularity') {
+                filtered = allWars.filter(w => w.name.toLowerCase().includes('singularity') || w.id < 2000);
+            } else if (type === 'lostbelt') {
+                filtered = allWars.filter(w => w.name.toLowerCase().includes('lostbelt') || w.name.toLowerCase().includes('cosmos in the lostbelt'));
+            }
+            renderWarList(filtered);
+        }
+
+        // Busca os detalhes profundos de uma War específica (incluindo as quests e scripts de lore)
+        async function loadWarDetails(warId) {
+            const detailsContent = document.getElementById('details-content');
+            const defaultMessage = document.getElementById('default-message');
+            
+            detailsContent.innerHTML = `<p class="text-center text-gray-400">Carregando detalhes da lore...</p>`;
+            defaultMessage.classList.add('hidden');
+            detailsContent.classList.remove('hidden');
+
+            try {
+                // Puxa o objeto completo da War
+                const response = await fetch(`${API_BASE}/war/${warId}.json`);
+                const warData = await response.json();
+
+                // Monta o cabeçalho do capítulo
+                let html = `
+                    <div class="flex flex-col md:flex-row gap-6 items-center border-b border-gray-700 pb-6 mb-6">
+                        <img src="${warData.banner}" alt="Banner" class="w-full md:w-48 rounded shadow-lg border border-gray-600">
+                        <div>
+                            <span class="bg-yellow-600 text-xs font-bold px-2 py-1 rounded">ID: ${warData.id}</span>
+                            <h2 class="text-3xl font-bold text-yellow-400 mt-2">${warData.originalName}</h2>
+                            <p class="text-gray-400 italic mt-1">${warData.name}</p>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4 text-blue-400 flex items-center gap-2">
+                        📜 Seções de História (Quests)
+                    </h3>
+                    <div class="space-y-4">
+                `;
+
+                // Agrupa e filtra as quests que possuem script de história (Lore)
+                if (warData.spots && warData.spots.length > 0) {
+                    warData.spots.forEach(spot => {
+                        spot.quests.forEach(quest => {
+                            // Verifica se a quest é de história (Main Quest) e se possui fases
+                            if (quest.type === 'main' || quest.type === 'story') {
+                                html += `
+                                    <div class="bg-gray-700 p-4 rounded-lg border border-gray-600">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <h4 class="font-bold text-lg text-white">${quest.name}</h4>
+                                            <span class="text-xs bg-gray-600 px-2 py-1 rounded text-gray-300">Consumo: ${quest.consumeType === 'ap' ? quest.consume + ' AP' : '0'}</span>
+                                        </div>
+                                        <p class="text-sm text-gray-400 mb-2">Local: <span class="text-gray-300">${spot.name}</span></p>
+                                        
+                                        <a href="https://apps.atlasacademy.io/db/NA/quest/${quest.id}/script" target="_blank" 
+                                           class="inline-flex items-center text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded transition mt-2">
+                                            Ler Diálogos / Script da Lore ➔
+                                        </a>
+                                    </div>
+                                `;
+                            }
+                        });
+                    });
+                } else {
+                    html += `<p class="text-gray-500">Nenhum script de história detalhado disponível para este ID de mapa diretamente.</p>`;
+                }
+
+                html += `</div>`;
+                detailsContent.innerHTML = html;
+
+            } catch (error) {
+                console.error("Erro ao carregar detalhes do capítulo:", error);
+                detailsContent.innerHTML = `<p class="text-red-400">Erro ao carregar os detalhes desta Lore. Tente novamente.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

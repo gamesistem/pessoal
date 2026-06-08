@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#080a0f" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Nocturia Wiki</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+
+<script id="ai-structured-data" type="application/ld+json">{}</script>
+
+<style>
+/* ─── RESET & VARIABLES ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-deep:      #080a0f;
+  --bg-mid:       #0d0f17;
+  --bg-panel:     #10131c;
+  --bg-card:      #161a26;
+  --border-glow:  rgba(147, 112, 219, 0.15);
+  --accent-purple:#9370db;
+  --accent-blue:  #4a90e2;
+  --text-main:    #d1d5db;
+  --text-muted:   #8a94a6;
+  --text-glow:    0 0 10px rgba(147, 112, 219, 0.3);
+  --font-title:   'Cinzel', serif;
+  --font-body:    'Crimson Pro', serif;
+}
+
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 1.15rem;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ─── LAYOUT SEMÂNTICO ─────────────────────────────────────────── */
+#layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar de Navegação */
+#sidebar {
+  width: 300px;
+  background-color: var(--bg-mid);
+  border-right: 1px solid var(--border-glow);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#sidebar h2 {
+  font-family: var(--font-title);
+  color: var(--accent-purple);
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  text-shadow: var(--text-glow);
+}
+
+#sidebar-content ul {
+  list-style: none;
+}
+
+#sidebar-content li {
+  margin-bottom: 0.75rem;
+}
+
+#sidebar-content a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  font-size: 1.05rem;
+}
+
+#sidebar-content a:hover, #sidebar-content a.active {
+  color: var(--accent-purple);
+  text-shadow: var(--text-glow);
+}
+
+#sidebar-footer {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-glow);
+  padding-top: 1rem;
+}
+
+/* Conteúdo Principal */
+#main {
+  flex: 1;
+  padding: 3rem;
+  max-width: 900px;
+  margin: 0 auto;
+  background-color: var(--bg-deep);
+}
+
+#loading-overlay {
+  font-family: var(--font-title);
+  color: var(--accent-purple);
+  text-align: center;
+  margin-top: 5rem;
+  font-size: 1.5rem;
+}
+
+/* Estilização Base do Conteúdo Gerado pelo Markdown */
+#article h1 {
+  font-family: var(--font-title);
+  color: #fff;
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border-glow);
+  padding-bottom: 0.5rem;
+}
+
+#article h2 {
+  font-family: var(--font-title);
+  color: var(--accent-purple);
+  font-size: 1.8rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+#article p {
+  margin-bottom: 1.25rem;
+  text-align: justify;
+}
+
+#article a {
+  color: var(--accent-blue);
+  text-decoration: none;
+}
+
+#article a:hover {
+  text-decoration: underline;
+}
+
+#article code {
+  background-color: var(--bg-panel);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.95rem;
+}
+
+/* Responsividade Básica */
+@media (max-width: 768px) {
+  #layout { flex-direction: column; }
+  #sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-glow); }
+  #main { padding: 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="layout">
+  
+  <nav id="sidebar" aria-label="Navegação da Wiki">
+    <div>
+      <h2>Nocturia Wiki</h2>
+      <div id="sidebar-content">
+        <ul>
+          <li><a href="#" onclick="loadDefaultPage()">Início</a></li>
+        </ul>
+      </div>
+    </div>
+    <div id="sidebar-footer">Carregando rodapé...</div>
+  </nav>
+
+  <main id="main" role="main">
+    
+    <div id="loading-overlay" style="display:none;">Invocando o grimório…</div>
+    
+    <article id="article" itemscope itemtype="https://schema.org/TechArticle" itemprop="articleBody">
+      <h1 itemprop="headline">Bem-vindo à Nocturia Wiki</h1>
+      <p>Selecione um tópico no menu lateral para iniciar a leitura estruturada.</p>
+    </article>
+
+    <div id="ai-raw-content" style="display:none;" aria-hidden="true" data-ai-readable="true"></div>
+
+  </main>
+</div>
+
+<script>
+/* ─── CONFIGURAÇÕES DA WIKI ─────────────────────────────────────── */
+const REPO

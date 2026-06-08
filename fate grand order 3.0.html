@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FGO Story Reader - Atlas Academy API</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --sidebar-color: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #007bff;
+            --border-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar - Lista de Capítulos */
+        #sidebar {
+            width: 300px;
+            background-color: var(--sidebar-color);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        .scrollable {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        h2 { text-align: center; color: var(--accent-color); font-size: 1.2rem; }
+
+        .chapter-item {
+            padding: 10px;
+            margin-bottom: 5px;
+            background: #2a2a2a;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        .chapter-item:hover { background: #3a3a3a; }
+        .chapter-item.active { border-left: 4px solid var(--accent-color); background: #333; }
+
+        /* Conteúdo Principal */
+        #main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: relative;
+        }
+
+        #quest-selector {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: var(--sidebar-color);
+            border-radius: 8px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            background: #333;
+            color: white;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Área de Leitura */
+        #story-viewer {
+            flex-grow: 1;
+            background: #000;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+            line-height: 1.6;
+            border: 1px solid var(--border-color);
+        }
+
+        .dialogue-line {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #222;
+            padding-bottom: 10px;
+        }
+
+        .speaker {
+            color: #ffcc00;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .text { font-size: 1.1rem; }
+
+        /* Loading Overlay */
+        #loader {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--accent-color);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>FGO Chapters</h2>
+        <div id="chapter-list" class="scrollable">
+            <!-- Capítulos serão carregados aqui -->
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="quest-selector">
+            <label for="quests">Selecione a Seção/Quest:</label>
+            <select id="quests" disabled>
+                <option>Selecione um capítulo primeiro...</option>
+            </select>
+        </div>
+
+        <div id="story-viewer">
+            <div id="content-placeholder">Selecione um capítulo e uma quest para ler a história.</div>
+        </div>
+
+        <div id="loader"><div class="spinner"></div></div>
+    </div>
+
+    <script>
+        const API_BASE = "https://api.atlasacademy.io";
+        const REGION = "NA"; // "NA" para inglês, "JP" para japonês
+        
+        const chapterListEl = document.getElementById('chapter-list');
+        const questSelectEl = document.getElementById('quests');
+        const storyViewerEl = document.getElementById('story-viewer');
+        const loader = document.getElementById('loader');
+
+        // 1. Carregar lista de Capítulos (Wars)
+        async function loadChapters() {
+            showLoader(true);
+            try {
+                const response = await fetch(`${API_BASE}/export/${REGION}/basic_war.json`);
+                const wars = await response.json();
+                
+                // Filtrar apenas capítulos principais (Main Story)
+                // Geralmente os IDs menores que 1000 ou específicos da história
+                const mainStory = wars
+                    .filter(war => war.id < 1000 || war.id > 9000) 
+                    .sort((a, b) => a.id - b.id);
+
+                chapterListEl.innerHTML = mainStory.map(war => `
+                    <div class="chapter-item" onclick="loadWarDetails(${war.id}, this)">
+                        ${war.longName}
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error("Erro ao carregar capítulos:", error);
+            }
+            showLoader(false);
+        }
+
+        // 2. Carregar detalhes da War selecionada para pegar as Quests
+        async function loadWarDetails(warId, element) {
+            // UI Feedback
+            document.querySelectorAll('.chapter-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            showLoader(true);
+            try {
+                const response = await fetch(`${API_BASE}/export/${REGION}/nice_war/${warId}.json`);
+                const warData = await response.json();
+
+                questSelectEl.disabled = false;
+                questSelectEl.innerHTML = '<option value="">Escolha uma quest...</option>';
+
+                // Mapear quests que possuem script
+                warData.spots.forEach(spot => {
+                    spot.quests.forEach(quest => {
+                        // Filtramos apenas Main Quests (tipo 1) que têm scripts
+                        if (quest.type === "main" && quest.scriptId) {
+                            const option = document.createElement('option');
+                            option.value = quest.scriptId;
+                            option.textContent = `Quest: ${quest.name} (ID: ${quest.scriptId})`;
+                            questSelectEl.appendChild(option);
+                        }
+                    });
+                });
+            } catch (error) {
+                alert("Erro ao carregar detalhes do capítulo.");
+            }
+            showLoader(false);
+        }
+
+        // 3. Carregar e parsear o Script de diálogo
+        async function loadScript(scriptId) {
+            if (!scriptId) return;
+            
+            showLoader(true);
+            storyViewerEl.innerHTML = "";
+            
+            try {
+                // A API de script retorna um JSON complexo com comandos de animação e falas
+                const response = await fetch(`${API_BASE}/script/${REGION}/${scriptId}`);
+                const scriptData = await response.json();
+
+                // Filtrar os componentes para pegar apenas falas (Component Type 1)
+                // Nota: O formato da Atlas Academy agrupa por 'labels' e 'components'
+                let htmlContent = "";
+
+                scriptData.components.forEach(comp => {
+                    // Tipos comuns: 'talk' ou componentes que contêm 'text'
+                    if (comp.type === "talk" && comp.talk) {
+                        const speaker = comp.talk.speakerName || "???";
+                        const text = formatFgoText(comp.talk.text);
+                        
+                        htmlContent += `
+                            <div class="dialogue-line">
+                                <span class="speaker">${speaker}</span>
+                                <div class="text">${text}</div>
+                            </div>
+                        `;
+                    }
+                });
+
+                storyViewerEl.innerHTML = htmlContent || "Nenhum diálogo encontrado para esta seção (pode ser apenas batalha).";
+                storyViewerEl.scrollTop = 0;
+
+            } catch (error) {
+                console.error(error);
+                storyViewerEl.innerHTML = "Erro ao carregar o script.";
+            }
+            showLoader(false);
+        }
+
+        // Limpar tags de formatação do FGO (ex: [r], [w], [ruby])
+        function formatFgoText(text) {
+            if (!text) return "";
+            return text
+                .replace(/\[[a-zA-Z0-9]+\]/g, '') // Remove tags simples como [line]
+                .replace(/\{ruby\((.*?),(.*?)\)\}/g, '$1 ($2)') // Formata rubis/notas
+                .replace(/\n/g, '<br>');
+        }
+
+        function showLoader(show) {
+            loader.style.display = show ? 'block' : 'none';
+        }
+
+        // Event Listeners
+        questSelectEl.addEventListener('change', (e) => loadScript(e.target.value));
+
+        // Iniciar
+        loadChapters();
+    </script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FGO Story Reader - Apenas Texto</title>
+    <style>
+        body {
+            font-family: serif; /* Fonte mais confortável para leitura */
+            background-color: #1a1a1a;
+            color: #dcdcdc;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 320px;
+            background-color: #111;
+            border-right: 2px solid #333;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .chapter-btn {
+            background: #222;
+            color: #eee;
+            border: 1px solid #444;
+            padding: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 14px;
+            border-radius: 4px;
+        }
+
+        .chapter-btn:hover { background: #333; }
+        .chapter-btn.active { border-color: #007bff; background: #2c3e50; }
+
+        /* Área de Leitura */
+        #main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        #controls {
+            background: #222;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            background: #000;
+            color: #fff;
+            border: 1px solid #555;
+            font-size: 16px;
+        }
+
+        #reader {
+            flex-grow: 1;
+            background: #111;
+            padding: 30px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            line-height: 1.8;
+            font-size: 18px;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .line { margin-bottom: 20px; border-bottom: 1px solid #222; padding-bottom: 10px; }
+        .name { color: #ffcc00; font-weight: bold; display: block; margin-bottom: 5px; }
+        .text { color: #fff; }
+
+        #status {
+            color: #888;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader" class="loading-overlay">Carregando dados...</div>
+
+    <div id="sidebar">
+        <h2 style="color: #007bff;">FGO Chapters</h2>
+        <div id="chapter-list"></div>
+    </div>
+
+    <div id="main">
+        <div id="controls">
+            <label>Selecione a Seção da História:</label>
+            <select id="quest-select" disabled>
+                <option>Selecione um capítulo na lateral...</option>
+            </select>
+            <div id="status">Status: Pronto.</div>
+        </div>
+
+        <div id="reader">
+            <div style="text-align: center; color: #666; margin-top: 50px;">
+                Escolha um capítulo e uma seção para começar a ler.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://api.atlasacademy.io";
+        // Mudado para JP para garantir que Ordeal Call apareça, mas você pode mudar para NA
+        const REGION = "JP"; 
+
+        const chapterList = document.getElementById('chapter-list');
+        const questSelect = document.getElementById('quest-select');
+        const reader = document.getElementById('reader');
+        const status = document.getElementById('status');
+        const loader = document.getElementById('loader');
+
+        // 1. Carregar Capítulos
+        async function init() {
+            showLoader(true);
+            try {
+                const res = await fetch(`${API_URL}/export/${REGION}/basic_war.json`);
+                const wars = await res.json();
+                
+                // Filtra História Principal (Singularidades, Lostbelts, etc)
+                const mainStory = wars.filter(w => w.id < 1000 || (w.id >= 2000 && w.id < 4000));
+                
+                chapterList.innerHTML = mainStory.map(war => `
+                    <button class="chapter-btn" onclick="loadQuests(${war.id}, this)">
+                        ${war.longName}
+                    </button>
+                `).join('');
+                
+                status.innerText = "Capítulos carregados.";
+            } catch (e) {
+                status.innerText = "Erro ao carregar capítulos. Verifique sua conexão.";
+                console.error(e);
+            }
+            showLoader(false);
+        }
+
+        // 2. Carregar Quests de um capítulo
+        async function loadQuests(warId, btn) {
+            document.querySelectorAll('.chapter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            showLoader(true);
+            status.innerText = "Carregando quests...";
+            
+            try {
+                // Usando o endpoint de WAR individual para ser mais rápido
+                const res = await fetch(`${API_URL}/export/${REGION}/nice_war/${warId}.json`);
+                const data = await res.json();
+                
+                questSelect.innerHTML = '<option value="">-- Selecione uma Quest --</option>';
+                
+                let foundQuests = 0;
+                data.spots.forEach(spot => {
+                    spot.quests.forEach(q => {
+                        // Só adiciona se tiver scriptId
+                        if (q.scriptId) {
+                            const opt = document.createElement('option');
+                            opt.value = q.scriptId;
+                            opt.innerText = `${q.name} (${q.scriptId})`;
+                            questSelect.appendChild(opt);
+                            foundQuests++;
+                        }
+                    });
+                });
+
+                questSelect.disabled = false;
+                status.innerText = `${foundQuests} seções de história encontradas.`;
+            } catch (e) {
+                alert("Erro ao carregar detalhes do capítulo. A API pode estar lenta.");
+                status.innerText = "Erro na requisição.";
+            }
+            showLoader(false);
+        }
+
+        // 3. Carregar e Limpar o Script de Texto
+        async function loadScript(scriptId) {
+            if (!scriptId) return;
+            
+            showLoader(true);
+            reader.innerHTML = "Lendo script...";
+            
+            try {
+                const res = await fetch(`${API_URL}/script/${REGION}/${scriptId}`);
+                const data = await res.json();
+                
+                let html = "";
+                data.components.forEach(c => {
+                    if (c.type === "talk" && c.talk) {
+                        const name = c.talk.speakerName || "---";
+                        const text = cleanText(c.talk.text);
+                        
+                        html += `
+                            <div class="line">
+                                <span class="name">${name}</span>
+                                <div class="text">${text}</div>
+                            </div>
+                        `;
+                    }
+                });
+
+                reader.innerHTML = html || "Esta seção não contém diálogos de texto.";
+                read

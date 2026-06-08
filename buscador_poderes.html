@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Buscador de Poderes</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d0d1a;
+    --bg2:       #13132a;
+    --bg3:       #1c1c38;
+    --bg4:       #252545;
+    --accent:    #e94560;
+    --accent2:   #ff6b35;
+    --text:      #e8e8f0;
+    --text-dim:  #7070a0;
+    --border:    #2a2a50;
+
+    --buff:      #4caf8a;
+    --buff-bg:   #0e2a1e;
+    --debuff:    #e05252;
+    --debuff-bg: #2a0e0e;
+    --ativa:     #5b9bd5;
+    --ativa-bg:  #0e1d2a;
+    --passiva:   #a47fd4;
+    --passiva-bg:#1e122a;
+    --trans:     #e6b44a;
+    --trans-bg:  #2a200a;
+    --cosm:      #8888aa;
+    --cosm-bg:   #16162a;
+
+    --origins:   #40c0c8;
+    --monster:   #e07840;
+    --mobs:      #60c060;
+    --fantasy:   #c870c8;
+    --magic:     #5080e0;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background stars ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, #1a1a4a 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, #2a0a1a 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    animation: twinkle var(--d, 3s) ease-in-out infinite;
+    opacity: 0;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0; }
+    50% { opacity: var(--op, 0.6); }
+  }
+
+  /* ── App container ── */
+  #app {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 28px 20px 40px;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 4px 20px #e9456044;
+    flex-shrink: 0;
+  }
+
+  h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, var(--text) 40%, var(--text-dim));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  #count-lbl {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 500;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    white-space: nowrap;
+  }
+
+  /* ── Search row ── */
+  .search-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .search-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: var(--text-dim);
+    pointer-events: none;
+  }
+
+  #search {
+    width: 100%;
+    background: var(--bg2);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px 11px 42px;
+    font-size: 14px;
+    font-family: 'Nunito', sans-serif;
+    transition: border-color .2s, box-shadow .2s;
+    outline: none;
+  }
+
+  #search::placeholder { color: var(--text-dim); }
+  #search:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px #e9456018;
+  }
+
+  #btn-clear {
+    width: 44px;
+    height: 44px;
+    background: var(--bg2);
+    color: var(--text-dim);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #btn-clear:hover { background: var(--bg3); color: var(--text); }
+
+  /* ── Filter rows ── */
+  .filter-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .filter-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-width: 64px;
+  }
+
+  .filter-btn {
+    background: var(--bg2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 13px;
+    font-size: 11.5px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s, box-shadow .15s;
+  }
+  .filter-btn:hover:not(.active) {
+    background: var(--bg3);
+    color: var(--text);
+  }
+  .filter-btn.active {
+    font-weight: 700;
+  }
+
+  /* Category button active states */
+  .filter-btn[data-cat="Todos"].active    { background:#e9456018; color: var(--accent);  border-color: #e9456055; }
+  .filter-btn[data-cat="buff"].active     { background:#4caf8a18; color: var(--buff);    border-color: #4caf8a55; }
+  .filter-btn[data-cat="debuff"].active   { background:#e0525218; color: var(--debuff);  border-color: #e0525255; }
+  .filter-btn[data-cat="ativa"].active    { background:#5b9bd518; color: var(--ativa);   border-color: #5b9bd555; }
+  .filter-btn[data-cat="passiva"].active  { background:#a47fd418; color: var(--passiva); border-color: #a47fd455; }
+  .filter-btn[data-cat="transformação"].active { background:#e6b44a18; color: var(--trans); border-color: #e6b44a55; }
+  .filter-btn[data-cat="cosmético"].active{ background:#8888aa18; color: var(--cosm);   border-color: #8888aa55; }
+
+  /* Origin button active states */
+  .filter-btn[data-orig="Todas"].active   { background:#e9456018; color: var(--accent);  border-color: #e9456055; }
+  .filter-btn[data-orig="Origins"].active { background:#40c0c818; color: var(--origins); border-color: #40c0c855; }
+  .filter-btn[data-orig="Monster"].active { background:#e0784018; color: var(--monster); border-color: #e0784055; }
+  .filter-btn[data-orig="Mobs"].active    { background:#60c06018; color: var(--mobs);    border-color: #60c06055; }
+  .filter-btn[data-orig="Fantasy"].active { background:#c870c818; color: var(--fantasy); border-color: #c870c855; }
+  .filter-btn[data-orig="Magic"].active   { background:#5080e018; color: var(--magic);   border-color: #5080e055; }
+
+  /* ── Divider ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 14px 0;
+  }
+
+  /* ── Results ── */
+  #results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* ── No results ── */
+  .no-results {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 15px;
+    padding: 60px 20px;
+    animation: fadeIn .3s ease;
+  }
+  .no-results .emoji { font-size: 40px; display: block; margin-bottom: 12px; }
+
+  /* ── Card ── */
+  .card {
+    border-radius: 10px;
+    border-left-width: 3px;
+    border-left-style: solid;
+    border-top: 1px solid;
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+    padding: 12px 16px;
+    animation: slideIn .2s ease;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .card:hover {
+    transform: translateX(3px);
+    box-shadow: -4px 0 16px currentColor;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .card[data-cat="buff"]         { background: var(--buff-bg);    border-color: #4caf8a28; border-left-color: var(--buff); }
+  .card[data-cat="debuff"]       { background: var(--debuff-bg);  border-color: #e0525228; border-left-color: var(--debuff); }
+  .card[data-cat="ativa"]        { background: var(--ativa-bg);   border-color: #5b9bd528; border-left-color: var(--ativa); }
+  .card[data-cat="passiva"]      { background: var(--passiva-bg); border-color: #a47fd428; border-left-color: var(--passiva); }
+  .card[data-cat="transformação"]{ background: var(--trans-bg);   border-color: #e6b44a28; border-left-color: var(--trans); }
+  .card[data-cat="cosmético"]    { background: var(--cosm-bg);    border-color: #8888aa28; border-left-color: var(--cosm); }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    border-width: 1px;
+    border-style: solid;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .badge-buff       { background:#4caf8a18; color: var(--buff);    border-color: #4caf8a44; }
+  .badge-debuff     { background:#e0525218; color: var(--debuff);  border-color: #e0525244; }
+  .badge-ativa      { background:#5b9bd518; color: var(--ativa);   border-color: #5b9bd544; }
+  .badge-passiva    { background:#a47fd418; color: var(--passiva); border-color: #a47fd444; }
+  .badge-transform  { background:#e6b44a18; color: var(--trans);   border-color: #e6b44a44; }
+  .badge-cosm       { background:#8888aa18; color: var(--cosm);    border-color: #8888aa44; }
+
+  .card-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .orig-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-style: solid;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .orig-Origins { color: var(--origins); background:#40c0c818; border-color: #40c0c840; }
+  .orig-Monster { color: var(--monster); background:#e0784018; border-color: #e0784040; }
+  .orig-Mobs    { color: var(--mobs);    background:#60c06018; border-color: #60c06040; }
+  .orig-Fantasy { color: var(--fantasy); background:#c870c818; border-color: #c870c840; }
+  .orig-Magic   { color: var(--magic);   background:#5080e018; border-color: #5080e040; }
+
+  .card-desc {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .highlight {
+    background: #e9456030;
+    color: #ff8888;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 7px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: #303060; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #404080; }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    h1 { font-size: 20px; }
+    .logo-icon { width: 36px; height: 36px; font-size: 18px; }
+    .filter-btn { padding: 4px 10px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+
+<div id="app">
+  <header>
+    <div class="header-left">
+      <div class="logo-icon">⚡</div>
+      <h1>Buscador de Poderes</h1>
+    </div>
+    <span id="count-lbl">carregando…</span>
+  </header>
+
+  <div class="search-row">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input id="search" type="text" placeholder="Buscar poder, descrição ou origem…" autocomplete="off" spellcheck="false">
+    </div>
+    <button id="btn-clear" title="Limpar busca">✕</button>
+  </div>
+
+  <div class="filter-row">
+    <span class="filter-label">Categoria</span>
+    <button class="filter-btn active" data-cat="Todos">Todos</button>
+    <button class="filter-btn" data-cat="buff">⬆ buff</button>
+    <button class="filter-btn" data-cat="debuff">⬇ debuff</button>
+    <button class="filter-btn" data-cat="ativa">▶ ativa</button>
+    <button class="filter-btn" data-cat="passiva">◈ passiva</button>
+    <button class="filter-btn" data-cat="transformação">⟳ transformação</button>
+    <button class="filter-btn" data-cat="cosmético">◉ cosmético</button>
+  </div>
+
+  <div class="filter-row">
+    <span class="filter-label">Origem</span>
+    <button class="filter-btn active" data-orig="Todas">Todas</button>
+    <button class="filter-btn" data-orig="Origins">Origins</button>
+    <button class="filter-btn" data-orig="Monster">Monster</button>
+    <button class="filter-btn" data-orig="Mobs">Mobs</button>
+    <button class="filter-btn" data-orig="Fantasy">Fantasy</button>
+    <button class="filter-btn" data-orig="Magic">Magic</button>
+  </div>
+
+  <hr class="divider">
+
+  <div id="results"></div>
+</div>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────────
+const PODERES = [
+  ["buff","aerial_combatant","Origins","Muito mais dano enquanto voa com asas de élitro."],
+  ["buff","aqua_affinity","Origins","Quebra blocos debaixo d'água normalmente."],
+  ["buff","burning_wrath","Origins","Dano adicional com ataques enquanto em chamas."],
+  ["buff","extra_reach","Origins","Alcança blocos e entidades mais distantes."],
+  ["buff","fall_immunity","Origins","Nunca sofre dano por queda."],
+  ["buff","fire_immunity","Origins","Imune a todos os danos causados por fogo."],
+  ["buff","hotblooded","Origins","Imune a veneno e fome por corpo quente."],
+  ["buff","like_water","Origins","Não afunda embaixo d'água a menos que queira."],
+  ["buff","master_of_webs","Origins","Move-se em teias, escala-as, prende inimigos e cria teias de fios."],
+  ["buff","natural_armor","Origins","Pele oferece proteção natural sem armadura."],
+  ["buff","scare_creepers","Origins","Creepers só explodem se forem atacados primeiro."],
+  ["buff","shulker_inventory","Origins","9 espaços adicionais no inventário, mantidos após a morte."],
+  ["buff","sprint_jump","Origins","Salta mais alto ao saltar correndo."],
+  ["buff","strong_arms","Origins","Quebra pedras naturais sem picareta."],
+  ["buff","swim_speed","Origins","Velocidade subaquática aumentada."],
+  ["buff","tailwind","Origins","Um pouco mais rápido a pé."],
+  ["buff","velvet_paws","Origins","Passos não causam vibrações detectáveis."],
+  ["buff","water_breathing","Origins","Respira debaixo d'água, mas não em terra."],
+  ["buff","air_from_potions","Origins","Ganha ar a partir de poções."],
+  ["buff","conduit_power_on_land","Origins","Obtém energia de condutos mesmo em terra firme."],
+  ["buff","lay_eggs","Origins","Ao acordar, bota um ovo."],
+  ["buff","better_aim","Monster","Mira mais precisa que humanos."],
+  ["buff","better_gold_armour","Monster","Armadura de ouro indestrutível e tão forte quanto diamante."],
+  ["buff","better_gold_weapons","Monster","Armas de ouro indestrutíveis e muito mais fortes."],
+  ["buff","creeper_ally","Monster","Creepers não atacam."],
+  ["buff","double_damage","Monster","Causa o dobro do dano de um jogador normal."],
+  ["buff","double_health","Monster","Dobro da saúde humana."],
+  ["buff","guardian_ally","Monster","Guardiões não atacam."],
+  ["buff","infinite_arrows","Monster","Flechas não se esgotam."],
+  ["buff","piglin_ally","Monster","Piglins não atacam."],
+  ["buff","sense_movement","Monster","Vê contornos de criaturas próximas através de blocos."],
+  ["buff","super_bartering","Monster","Obtém 2 a 5× mais itens ao barganhar."],
+  ["buff","swim_speed","Monster","Velocidade subaquática aumentada."],
+  ["buff","trident_expert","Monster","+2 dano com tridente; canalização e correnteza sem requisitos."],
+  ["buff","undead_ally","Monster","Mobs mortos-vivos não atacam."],
+  ["buff","water_combatant","Monster","Mais dano quando está na água."],
+  ["buff","water_vision","Monster","Visão perfeita embaixo d'água."],
+  ["buff","water_breathing","Monster","Fôlego infinito debaixo d'água."],
+  ["buff","wither_immunity","Monster","Imune ao efeito Murchar."],
+  ["buff","freeze_immune","Monster","Imune a danos por congelamento."],
+  ["buff","zombified_piglin_allies","Monster","Piglins Zumbificados próximos defendem você."],
+  ["buff","alpha_wolf","Mobs","Lobos domados ficam mais fortes."],
+  ["buff","better_berries","Mobs","Bagas têm efeitos mais benéficos."],
+  ["buff","better_potions","Mobs","Poções duram mais depois de ingeridas."],
+  ["buff","bouncy","Mobs","Todos os blocos funcionam como blocos de gosma."],
+  ["buff","careful_gatherer","Mobs","Arbustos de bagas doces não causam dano."],
+  ["buff","guardian_ally","Mobs","Guardiões não atacam."],
+  ["buff","item_collector","Mobs","Raio de coleta de itens maior."],
+  ["buff","lava_walk","Mobs","Anda sobre lava; mais rápido na lava."],
+  ["buff","lower_totem_chance","Mobs","Totens têm 10% de chance de não quebrar ao serem usados."],
+  ["buff","pillager_aligned","Mobs","Saqueadores são aliados; aldeões desgostam."],
+  ["buff","prismarine_skin","Mobs","Pele de prismarina fornece armadura natural."],
+  ["buff","queen_bee","Mobs","Abelhas não atacam ao coletar mel."],
+  ["buff","stinger","Mobs","Envenena o alvo ao socar."],
+  ["buff","stronger_snowballs","Mobs","Bolas de neve causam 1 ponto de dano."],
+  ["buff","trident_expert","Mobs","+2 dano com tridente; canalização e correnteza sem requisitos."],
+  ["buff","water_combatant","Mobs","Mais dano quando está na água."],
+  ["buff","illager","Mobs","Não é atacado por saqueadores."],
+  ["buff","mining_fatigue_immune","Mobs","Imune à Fadiga de Mineração."],
+  ["buff","water_breathing","Mobs","Respira para sempre debaixo d'água."],
+  ["buff","water_vision","Mobs","Visão clara debaixo d'água."],
+  ["buff","allay_master","Fantasy","Cria alianças com Allays sem tocar música."],
+  ["buff","arrow_effect_booster","Fantasy","Potencializa efeitos de poções aplicadas a flechas."],
+  ["buff","chime","Fantasy","Absorve som de fragmentos de ametista para regenerar saúde."],
+  ["buff","double_health","Fantasy","Mais saúde por ser maior que humanos."],
+  ["buff","end_crystal_healing","Fantasy","Regenera saúde a partir de Cristais do Fim próximos."],
+  ["buff","fortune_increaser","Fantasy","Rendimento muito maior de minérios ao minerar."],
+  ["buff","increased_arrow_damage","Fantasy","Flechas causam o dobro de dano."],
+  ["buff","increased_arrow_speed","Fantasy","Flechas 3× mais rápidas."],
+  ["buff","increased_speed","Fantasy","Muito mais rápido que um cavalo normal."],
+  ["buff","infinite_haste","Fantasy","Mineração muito mais rápida que humanos."],
+  ["buff","leeching","Fantasy","Ao matar, absorve parte da vida da vítima."],
+  ["buff","magic_resistance","Fantasy","Imune a venenos e efeitos nocivos de poções."],
+  ["buff","natural_armor","Fantasy","Corpo forte oferece defesa natural."],
+  ["buff","perfect_shot","Fantasy","Flechas disparadas perfeitamente retas."],
+  ["buff","strong_skin","Fantasy","Flechas causam muito menos dano."],
+  ["buff","stronger","Fantasy","Ataques físicos causam muito mais dano."],
+  ["buff","super_jump","Fantasy","Salta muito mais alto que um cavalo."],
+  ["buff","undead_ally","Fantasy","Criaturas mortas-vivas não atacam."],
+  ["buff","kill_boost","Magic","Ao matar, absorve saúde da criatura, podendo ganhar até 30 corações extras."],
+  ["buff","dark_strength","Magic","Quase dobro de dano no escuro; nenhum dano no nível de luz 15."],
+  ["buff","increased_reach","Magic","Alcança blocos, itens e entidades muito mais distantes."],
+  ["buff","no_magic","Magic","Repele poções e encantamentos comuns."],
+  ["buff","potion_master","Magic","Poções bebidas e arremessadas são muito mais fortes."],
+  ["buff","silent","Magic","Não é detectado por Sensores Sculk ao mover ou comer."],
+  ["buff","spare_life","Magic","Sobrevive à morte uma vez a cada 10 minutos."],
+  ["buff","telekinesis","Magic","Itens de blocos e entidades vão direto ao inventário."],
+  ["buff","undead_ally","Magic","Criaturas mortas-vivas não atacam."],
+  ["buff","undead_commander","Magic","Mortos-vivos próximos atacam junto com você."],
+
+  ["debuff","burn_in_daylight","Origins","Queima à luz do dia se não estiver invisível."],
+  ["debuff","carnivore","Origins","Só pode comer carne; vegetais proibidos."],
+  ["debuff","claustrophobia","Origins","Teto baixo por tempo prolongado enfraquece e deixa lento."],
+  ["debuff","fragile","Origins","3 corações a menos que humanos."],
+  ["debuff","fresh_air","Origins","Cama precisa estar acima de 86 blocos de altitude."],
+  ["debuff","light_armor","Origins","Não pode usar armadura mais pesada que cota de malha."],
+  ["debuff","more_exhaustion","Origins","Cansa muito mais rápido; precisa comer mais."],
+  ["debuff","more_kinetic_damage","Origins","Sofre mais dano ao cair e colidir com blocos."],
+  ["debuff","nine_lives","Origins","1 coração a menos que humanos."],
+  ["debuff","no_shield","Origins","Não pode segurar um escudo na vertical."],
+  ["debuff","pumpkin_hate","Origins","Não consegue ver jogadores usando abóbora esculpida."],
+  ["debuff","vegetarian","Origins","Não consegue digerir nenhum tipo de carne."],
+  ["debuff","water_vulnerability","Origins","Contato com água causa dano ao longo do tempo."],
+  ["debuff","weak_arms","Origins","Sem poção de força, só minera pedra com ≤2 blocos adjacentes."],
+  ["debuff","damage_from_potions","Origins","Sofre dano de poções."],
+  ["debuff","damage_from_snowballs","Origins","Sofre dano de bolas de neve."],
+  ["debuff","aquatic","Origins","Dano aumentado ao ser Empalado."],
+  ["debuff","arthropod","Origins","Dano aumentado e lentidão pela Maldição dos Artrópodes."],
+  ["debuff","blindness","Monster","Não enxerga além de alguns quarteirões."],
+  ["debuff","burn_in_day","Monster","Queima à luz do dia."],
+  ["debuff","cold_slowness","Monster","Mais lento em biomas frios."],
+  ["debuff","double_fire_damage","Monster","Sofre dobro de dano por fogo."],
+  ["debuff","fear_cats","Monster","Náuseas e fraqueza perto de gatos."],
+  ["debuff","half_max_saturation","Monster","Retém apenas metade da saturação."],
+  ["debuff","heat_slowness","Monster","Mais lento em biomas quentes."],
+  ["debuff","land_slowness","Monster","Move-se muito mais devagar em terra firme."],
+  ["debuff","scare_villagers","Monster","Aldeões têm medo e se recusam a negociar."],
+  ["debuff","skeleton_body","Monster","Menos saúde que humanos."],
+  ["debuff","slowness","Monster","Move-se mais lento que humanos."],
+  ["debuff","zombie_hunger","Monster","Esgota-se muito mais rápido."],
+  ["debuff","undead","Monster","Sofre mais dano de Golpe Divino."],
+  ["debuff","melting","Mobs","Derrete em biomas quentes, perdendo saúde e velocidade."],
+  ["debuff","surface_weakness","Mobs","Enfraquecido em terra firme."],
+  ["debuff","small_bug","Mobs","2 corações a menos que humanos."],
+  ["debuff","small_fox","Mobs","2 corações a menos que humanos."],
+  ["debuff","small_weak","Mobs","Quase não causa dano com menos de 2 corações."],
+  ["debuff","zombie_hunger","Mobs","Esgota-se muito mais rápido."],
+  ["debuff","wolf_body","Mobs","2 corações a menos que humanos."],
+  ["debuff","surface_slowness","Mobs","Caminha mais devagar."],
+  ["debuff","undead","Mobs","Queima à luz do dia; mais dano de Golpe Divino."],
+  ["debuff","daylight_sensitive","Fantasy","Pega fogo à luz do dia."],
+  ["debuff","heavy_blow","Fantasy","Ataques mais fortes, porém com tempo de recarga maior."],
+  ["debuff","ocean_wish","Fantasy","Muito mais fraco fora da água."],
+  ["debuff","poor_shot","Fantasy","Mãos grandes tornam flechas lentas e imprecisas."],
+  ["debuff","water_sensitive","Fantasy","Água causa dano ao longo do tempo."],
+  ["debuff","burn_in_light","Magic","Pega fogo em qualquer presença de luz."],
+  ["debuff","cursed_strikes","Magic","Sofre efeito negativo por 15 seg ao atingir algo."],
+  ["debuff","unskilled_warrior","Magic","Causa apenas 0,75× de dano em combate corpo a corpo."],
+  ["debuff","weak_in_water","Magic","Na água, fica com apenas 3 corações."],
+  ["debuff","double_fire_damage","Magic","Sofre dobro de dano por fogo."],
+  ["debuff","no_fire_resistance","Magic","Não pode usar poções de resistência ao fogo."],
+
+  ["ativa","launch_into_air","Origins","A cada 30 seg, lança cerca de 20 blocos no ar."],
+  ["ativa","throw_ender_pearl","Origins","Lança pérola do End sem dano para teletransporte."],
+  ["ativa","elytra","Origins","Pressione pulo duas vezes para planar com asas Elytra embutidas."],
+  ["ativa","phantomize","Origins","Botão esquerdo no ar com mão vazia entra em Forma Fantasma."],
+  ["ativa","sonic_boom","Monster","A cada 30 seg, gera onda sônica batendo no ar com a mão."],
+  ["ativa","explosive","Monster","Sacrifica saúde para criar explosão a cada 15 segundos."],
+  ["ativa","elder_magic","Mobs","Lança feitiço em jogadores próximos para diminuir velocidade de mineração."],
+  ["ativa","bee_wings","Mobs","Usa asas de abelha para descer mais lentamente."],
+  ["ativa","split","Mobs","Transforma pontos de comida em gosma para defesa."],
+  ["ativa","wolf_howl","Mobs","Botão esquerdo sem segurar nada uiva, dando força a lobos próximos."],
+  ["ativa","summon_fangs","Mobs","Invoca presas."],
+  ["ativa","warped_fungus_eater","Mobs","Come fungos deformados para recuperar fome + leve aumento de velocidade."],
+  ["ativa","potion_action","Mobs","Recebe efeito de poção aleatório baseado na situação atual."],
+  ["ativa","bow_burst","Fantasy","Conjura feitiço em flecha para disparar 3 de uma vez (recarga 7 seg)."],
+  ["ativa","breath_storer","Fantasy","Botão direito com garrafa vazia armazena Sopro do Dragão."],
+  ["ativa","dragon_fireball","Fantasy","Botão direito com espada lança bola de fogo de dragão (recarga 30 seg)."],
+  ["ativa","vampiric_transformation","Fantasy","Transforma outros jogadores em vampiros ao matá-los."],
+  ["ativa","control_monsters","Magic","Botão direito em monstro hipnotiza-o para atacar seu último alvo."],
+  ["ativa","gold_converter","Magic","Botão direito em bloco de cobre transforma em ouro e vice-versa."],
+  ["ativa","interactions_give_nausea","Magic","Botão direito em jogador causa náuseas por 30 seg nele."],
+  ["ativa","interact_regeneration","Magic","Botão direito em objeto concede Regeneração II por 10 seg."],
+  ["ativa","bring_back_dead","Magic","Soco faz jogadores mortos próximos voltarem ao local onde morreram."],
+
+  ["passiva","cat_vision","Origins","Enxerga no escuro quando não está na água."],
+  ["passiva","slow_falling","Origins","Cai suavemente como uma pena, a menos que se esgueire."],
+  ["passiva","water_vision","Origins","Visão perfeita debaixo d'água."],
+  ["passiva","invisibility","Origins","Fica invisível enquanto estiver em forma fantasma."],
+  ["passiva","phasing","Origins","Atravessa materiais sólidos (exceto obsidiana) na forma fantasma."],
+  ["passiva","hunger_over_time","Origins","Sente fome enquanto estiver na forma fantasma."],
+  ["passiva","land_night_vision","Monster","Visão noturna em terra firme."],
+  ["passiva","slowness_arrows","Monster","Todas as flechas disparadas aplicam efeito de lentidão."],
+  ["passiva","flower_power","Mobs","Perto de várias flores, ganha regeneração."],
+  ["passiva","frigid_strength","Mobs","Causa mais dano em áreas frias."],
+  ["passiva","full_moon","Mobs","Na lua cheia, fica mais rápido, forte e saudável."],
+  ["passiva","timid_creature","Mobs","Velocidade aumenta perto de mais de 3 jogadores."],
+  ["passiva","wolf_pack","Mobs","Perto de 4+ lobos, ganha velocidade e dano."],
+  ["passiva","wolf_pack_attack","Mobs","Mais dano quando perto de lobos."],
+  ["passiva","full_moon_attack","Mobs","Dano de ataque aumentado em noites de lua cheia."],
+  ["passiva","full_moon_health","Mobs","Saúde máxima aumentada na lua cheia."],
+  ["passiva","small_weak_knockback","Mobs","Mais repulsão quando tem menos de 2 corações."],
+  ["passiva","elder_spikes","Mobs","Espinhos com chance de causar dano a atacantes."],
+  ["passiva","guardian_spikes","Mobs","Espinhos com chance de causar dano a atacantes."],
+  ["passiva","overheat","Mobs","Barra de temperatura sobe em biomas quentes e esfria em outros."],
+  ["passiva","bardic_intuition","Fantasy","Creepers podem dropar disco de música mesmo sem esqueleto."],
+  ["passiva","elegy","Fantasy","Fica mais forte quando tem menos de 3 corações."],
+  ["passiva","end_boost","Fantasy","Mais saúde e força no End."],
+  ["passiva","infinite_night_vision","Fantasy","Enxerga no escuro por evolução."],
+  ["passiva","moon_strength","Fantasy","Mais forte em noites de lua cheia."],
+  ["passiva","note_block_power","Fantasy","Ganha força e velocidade quando Bloco de Notas próximo é tocado."],
+  ["passiva","ocean_wish","Fantasy","Muito mais fraco fora da água."],
+  ["passiva","oceans_grace","Fantasy","Saúde e dano extras quando na água ou na chuva."],
+  ["passiva","invisible_in_darkness","Magic","Em lugares muito escuros, entra em Forma Sombria, invisível e inatacável."],
+  ["passiva","invisible_when_still","Magic","Fica invisível quando completamente parado."],
+  ["passiva","regeneration_when_still","Magic","Regenera saúde ao ficar parado."],
+  ["passiva","spirit_strength","Magic","Mais forte no Nether, mais fraco fora dele."],
+  ["passiva","dark_aura","Magic","Aldeões têm medo."],
+
+  ["transformação","drowned_transform_into_zombie","Monster","Transforma-se em zumbi em local quente por tempo prolongado."],
+  ["transformação","husk_transform_into_zombie","Monster","Transforma-se em zumbi ao ficar muito tempo na água."],
+  ["transformação","transform_into_husk_and_drowned","Monster","Vira Casco no deserto e Afogado na água."],
+  ["transformação","transform_into_piglin","Monster","Come maçã dourada sob poção de fraqueza para virar Piglin."],
+  ["transformação","transform_into_skeleton","Monster","Vira esqueleto em área quente por tempo prolongado."],
+  ["transformação","transform_into_stray","Monster","Vira Vira-Lata no frio por tempo prolongado."],
+  ["transformação","transform_into_zombified_piglin","Monster","Vira Piglin Zumbificado fora do Nether por tempo prolongado."],
+  ["transformação","vampiric_transformation","Fantasy","Transforma outros jogadores em vampiros ao matá-los."],
+
+  ["cosmético","grayscale","Origins","Aparência sem cor (requer SkinsRestorer)."],
+  ["cosmético","ender_particles","Origins","Emite partículas roxas do Ender."],
+  ["cosmético","flame_particles","Origins","Emite partículas de fogo."],
+  ["cosmético","phantomize_overlay","Origins","Sobreposição vermelha ao estar em modo fantasma."],
+  ["cosmético","nether_spawn","Origins","Ponto de renascimento natural no Nether."],
+  ["cosmético","zombie_touch","Monster","Transforma aldeões em zumbis em vez de matá-los."],
+  ["cosmético","snow_trail","Mobs","Deixa um rastro de neve ao caminhar."],
+  ["cosmético","rideable_creature","Mobs","Outros jogadores podem te montar."],
+  ["cosmético","sly","Mobs","Move-se mais rápido (comportamental)."],
+  ["cosmético","witch_particles","Mobs","Emite partículas de bruxa."],
+  ["cosmético","becomes_elder_guardian","Mobs","Ganha a origem Guardião Ancião ao matar um Guardião Ancião."],
+  ["cosmético","large_body","Fantasy","Três quarteirões de altura."],
+  ["cosmético","small_body","Fantasy","Apenas um quarteirão de altura."],
+  ["cosmético","permanent_horse","Fantasy","Metade cavalo, metade humano."],
+];
+
+const CAT_EMOJI = {
+  buff: "⬆", debuff: "⬇", ativa: "▶", passiva: "◈", "transformação": "⟳", cosmético: "◉"
+};
+const CAT_BADGE_CLASS = {
+  buff: "badge-buff", debuff: "badge-debuff", ativa: "badge-ativa",
+  passiva: "badge-passiva", "transformação": "badge-transform", cosmético: "badge-cosm"
+};
+
+// ── Stars ────────────────────────────────────────────────────────────────────
+(function(){
+  const s = document.getElementById('stars');
+  for (let i = 0; i < 80; i++) {
+    const el = document.createElement('div');
+    el.className = 'star';
+    const size = Math.random() * 2 + 0.5;
+    el.style.cssText = `
+      left:${Math.random()*100}%;top:${Math.random()*100}%;
+      width:${size}px;height:${size}px;
+      --d:${(Math.random()*4+2).toFixed(1)}s;
+      --op:${(Math.random()*0.5+0.2).toFixed(2)};
+      animation-delay:${(Math.random()*5).toFixed(2)}s;
+    `;
+    s.appendChild(el);
+  }
+})();
+
+// ── State ────────────────────────────────────────────────────────────────────
+let activeCat  = "Todos";
+let activeOrig = "Todas";
+let searchTimer = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function highlight(text, q) {
+  if (!q || q.length < 2) return escHtml(text);
+  const safe = escHtml(text);
+  const safeQ = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return safe.replace(new RegExp(`(${safeQ})`,'gi'),
+    '<span class="highlight">$1</span>');
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  const q    = document.getElementById('search').value.toLowerCase().trim();
+  const cat  = activeCat;
+  const orig = activeOrig;
+
+  const filtered = PODERES.filter(([c, nome, o, desc]) => {
+    if (cat  !== "Todos"  && c !== cat)  return false;
+    if (orig !== "Todas"  && o !== orig) return false;
+    if (q && !nome.toLowerCase().includes(q) && !desc.toLowerCase().includes(q)
+          && !o.toLowerCase().includes(q)    && !c.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  document.getElementById('count-lbl').textContent =
+    `${filtered.length} de ${PODERES.length} poderes`;
+
+  const container = document.getElementById('results');
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="no-results">
+        <span class="emoji">🔎</span>
+        Nenhum poder encontrado.<br>Tente outros termos ou filtros.
+      </div>`;
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  filtered.forEach(([cat, nome, orig, desc]) => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.dataset.cat = cat;
+    div.innerHTML = `
+      <div class="card-top">
+        <span class="badge ${CAT_BADGE_CLASS[cat] || ''}">${CAT_EMOJI[cat] || '?'} ${cat.toUpperCase()}</span>
+        <span class="card-name">${highlight(nome, q)}</span>
+        <span class="orig-badge orig-${orig}">${orig}</span>
+      </div>
+      <div class="card-desc">${highlight(desc, q)}</div>
+    `;
+    frag.appendChild(div);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(frag);
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+document.getElementById('search').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(render, 160);
+});
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  document.getElementById('search').value = '';
+  render();
+});
+
+document.querySelectorAll('.filter-btn[data-cat]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn[data-cat]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeCat = btn.dataset.cat;
+    render();
+  });
+});
+
+document.querySelectorAll('.filter-btn[data-orig]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn[data-orig]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeOrig = btn.dataset.orig;
+    render();
+  });
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>

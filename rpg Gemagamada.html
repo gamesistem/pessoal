@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TERMINAL QUEST - TEXT RPG</title>
+    <!-- Tailwind CSS para utilitários de estilo rápidos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts para fonte monoespaçada perfeita de terminal -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            background-color: #050505;
+            color: #39ff14; /* Verde neon clássico */
+            text-shadow: 0 0 2px rgba(57, 255, 20, 0.5);
+        }
+        /* Scrollbar customizada estilo retro */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #020202;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f800d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #39ff14;
+        }
+        /* Efeito CRT scanlines suave */
+        .crt-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0.15;
+        }
+        .terminal-border {
+            border: 2px solid #1f800d;
+            box-shadow: 0 0 10px rgba(31, 128, 13, 0.3);
+        }
+        .btn-terminal {
+            background-color: #0a0a0a;
+            border: 1px solid #39ff14;
+            color: #39ff14;
+            transition: all 0.2s ease;
+        }
+        .btn-terminal:hover:not(:disabled) {
+            background-color: #39ff14;
+            color: #050505;
+            box-shadow: 0 0 8px rgba(57, 255, 20, 0.8);
+        }
+        .btn-terminal:disabled {
+            border-color: #11440a;
+            color: #11440a;
+            cursor: not-allowed;
+        }
+        .amber-theme {
+            color: #ffb000 !important;
+            text-shadow: 0 0 2px rgba(255, 176, 0, 0.5) !important;
+        }
+        .amber-theme .terminal-border {
+            border-color: #8a5f00 !important;
+            box-shadow: 0 0 10px rgba(138, 95, 0, 0.3) !important;
+        }
+        .amber-theme .btn-terminal {
+            border-color: #ffb000 !important;
+            color: #ffb000 !important;
+        }
+        .amber-theme .btn-terminal:hover:not(:disabled) {
+            background-color: #ffb000 !important;
+            color: #050505 !important;
+            box-shadow: 0 0 8px rgba(255, 176, 0, 0.8) !important;
+        }
+        .amber-theme .btn-terminal:disabled {
+            border-color: #553e00 !important;
+            color: #553e00 !important;
+        }
+        .amber-theme ::-webkit-scrollbar-thumb {
+            background: #8a5f00;
+        }
+        .amber-theme ::-webkit-scrollbar-thumb:hover {
+            background: #ffb000;
+        }
+        .scanline {
+            animation: scroll-scanline 6s linear infinite;
+        }
+        @keyframes scroll-scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex flex-col justify-between selection:bg-green-900 selection:text-green-300">
+    <div class="crt-overlay"></div>
+    <div class="fixed top-0 left-0 w-full h-1 bg-green-500 opacity-20 scanline pointer-events-none z-50"></div>
+
+    <!-- Header Principal -->
+    <header class="max-w-6xl w-full mx-auto mb-4 flex flex-col sm:flex-row justify-between items-center border-b border-green-800 pb-2">
+        <div>
+            <h1 class="text-2xl font-bold tracking-widest">[ TERMINAL_QUEST_RPG v2.6 ]</h1>
+            <p class="text-xs text-green-600">SISTEMA OPERACIONAL RETRÔ DE EXPLORAÇÃO E COMBATE</p>
+        </div>
+        <div class="flex gap-4 mt-2 sm:mt-0 text-sm">
+            <button onclick="toggleTheme()" class="btn-terminal px-3 py-1 text-xs rounded">ALTERAR COR (VERDE/ÂMBAR)</button>
+            <span id="save-status" class="text-xs bg-green-950 px-2 py-1 rounded text-green-400">Save Local: OK</span>
+        </div>
+    </header>
+
+    <!-- Corpo Principal do Jogo -->
+    <main class="max-w-6xl w-full mx-auto flex-grow grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        <!-- PAINEL ESQUERDO: Painel do Jogador & Status -->
+        <section id="panel-stats" class="lg:col-span-3 terminal-border bg-black p-4 rounded flex flex-col justify-between space-y-4">
+            <div>
+                <h2 class="text-lg font-bold border-b border-green-800 pb-1 mb-3 text-center">/// STATUS DO HERÓI ///</h2>
+                
+                <!-- Informações Básicas -->
+                <div class="space-y-1 text-sm">
+                    <p>NOME: <span id="char-name" class="font-bold text-white">NENHUM</span></p>
+                    <p>CLASSE: <span id="char-class" class="font-bold text-white">-</span></p>
+                    <p>NÍVEL: <span id="char-level" class="text-white">1</span></p>
+                    <p>EXP: <span id="char-exp">0/100</span></p>
+                    <div class="w-full bg-green-950 h-2 rounded overflow-hidden mb-3">
+                        <div id="exp-bar" class="bg-green-500 h-full" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Atributos Vitais -->
+                <div class="space-y-1 text-sm border-t border-green-900 pt-2 mt-2">
+                    <p>HP: <span id="char-hp" class="text-red-400 font-bold">0/0</span></p>
+                    <div class="w-full bg-red-950 h-2.5 rounded overflow-hidden mb-2">
+                        <div id="hp-bar" class="bg-red-500 h-full" style="width: 0%"></div>
+                    </div>
+                    <p>MP: <span id="char-mp" class="text-blue-400 font-bold">0/0</span></p>
+                    <div class="w-full bg-blue-950 h-2.5 rounded overflow-hidden mb-2">
+                        <div id="mp-bar" class="bg-blue-500 h-full" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Atributos Básicos -->
+                <div class="text-sm border-t border-green-900 pt-2 mt-2 space-y-1">
+                    <p class="text-xs text-green-600 uppercase font-semibold">ATRIBUTOS:</p>
+                    <div class="grid grid-cols-2 gap-1 text-xs">
+                        <div>FORÇA (FOR): <span id="attr-for" class="text-white font-bold">0</span></div>
+                        <div>DESTREZA (DES): <span id="attr-des" class="text-white font-bold">0</span></div>
+                        <div>INTELIGÊNCIA (INT): <span id="attr-int" class="text-white font-bold">0</span></div>
+                        <div>CONSTITUIÇÃO (CON): <span id="attr-con" class="text-white font-bold">0</span></div>
+                    </div>
+                </div>
+
+                <!-- Equipamento Atual -->
+                <div class="text-sm border-t border-green-900 pt-2 mt-2 space-y-1">
+                    <p class="text-xs text-green-600 uppercase font-semibold">EQUIPAMENTO:</p>
+                    <p class="text-xs">ARMA: <span id="eq-weapon" class="text-yellow-300">Nenhuma</span></p>
+                    <p class="text-xs">ARMADURA: <span id="eq-armor" class="text-yellow-300">Nenhuma</span></p>
+                </div>
+
+                <!-- Inventário Rápido -->
+                <div class="text-sm border-t border-green-900 pt-2 mt-2 space-y-1">
+                    <p class="text-xs text-green-600 uppercase font-semibold">RECURSOS:</p>
+                    <p>OURO: <span id="char-gold" class="text-yellow-400 font-bold">0g</span></p>
+                    <p>POÇÕES HP: <span id="pot-hp" class="text-red-400 font-bold">0</span></p>
+                    <p>POÇÕES MP: <span id="pot-mp" class="text-blue-400 font-bold">0</span></p>
+                </div>
+            </div>
+
+            <!-- Botões Rápidos de Utilitários -->
+            <div class="border-t border-green-900 pt-2 space-y-2">
+                <div class="text-xs text-center text-green-600 mb-1">RANK DE BATALHA: <span id="battle-rank" class="text-yellow-400 font-bold">D</span></div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <button onclick="saveGame()" class="btn-terminal p-1 rounded">SALVAR</button>
+                    <button onclick="resetGamePrompt()" class="btn-terminal p-1 rounded text-red-500 border-red-900">REINICIAR</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAINEL CENTRAL: Jogo, Telas e Console de Logs -->
+        <section class="lg:col-span-6 flex flex-col gap-4">
+            
+            <!-- ÁREA DE VISUALIZAÇÃO DINÂMICA (TELAS MUDAM AQUI) -->
+            <div id="screen-container" class="terminal-border bg-black p-4 rounded h-[380px] flex flex-col justify-between overflow-y-auto relative">
+                
+                <!-- TELA 1: Criação de Personagem -->
+                <div id="screen-creation" class="space-y-4">
+                    <h2 class="text-lg font-bold text-center border-b border-green-800 pb-1">CRIAR FICHA DE PERSONAGEM</h2>
+                    
+                    <div class="space-y-2">
+                        <label class="block text-sm">DIGITE O SEU NOME DE AVENTUREIRO:</label>
+                        <input id="input-name" type="text" maxlength="15" value="Aventureiro" class="bg-black border border-green-500 p-1 text-green-300 focus:outline-none w-full max-w-xs text-sm">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-sm">SELECIONE A SUA CLASSE INICIAL:</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="selectClass('Guerreiro')" id="btn-class-Guerreiro" class="btn-terminal p-1.5 text-xs rounded font-bold">GUERREIRO</button>
+                            <button onclick="selectClass('Mago')" id="btn-class-Mago" class="btn-terminal p-1.5 text-xs rounded font-bold">MAGO</button>
+                            <button onclick="selectClass('Ladino')" id="btn-class-Ladino" class="btn-terminal p-1.5 text-xs rounded font-bold">LADINO</button>
+                        </div>
+                        <p id="class-desc" class="text-xs text-green-500 italic mt-1 min-h-[32px]">Guerreiro: Focado em Força e Constituição. Alto HP e dano físico robusto.</p>
+                    </div>
+
+                    <!-- Distribuição de Pontos -->
+                    <div class="border-t border-green-900 pt-2 space-y-1.5 text-sm">
+                        <div class="flex justify-between items-center">
+                            <span>PONTOS DISPONÍVEIS: <strong id="creation-points" class="text-white text-lg">10</strong></span>
+                            <button onclick="resetPoints()" class="text-xs text-red-400 underline">Resetar Distribuição</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex justify-between items-center bg-green-950 p-1 rounded px-2">
+                                <span>FORÇA: <strong id="c-for">5</strong></span>
+                                <div class="flex gap-1">
+                                    <button onclick="adjustPoint('for', -1)" class="px-2 bg-black border border-green-800 hover:border-green-500 rounded text-xs">-</button>
+                                    <button onclick="adjustPoint('for', 1)" class="px-2 bg-black border border-green-800 hover:border-green-500 rounded text-xs">+</button>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center bg-green-950 p-1 rounded px-2">
+                                <span>DESTREZA: <strong id="c-des">5</strong></span>
+                                <div class="flex gap-1">
+                                    <button onclick="adjustPoint('des', -1)" class="px-2 bg-black border border-green-800 hover:border-green-500 rounded text-xs">-</button>
+                                    <button onclick="adjustPoint('des', 1)" class="px-2 bg-black border border-green-800 hover:border-green-500 rounded text-xs">+</button>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center bg-green-950 p-1 rounded px-2">
+                                <span>INTELIGÊNCIA: <strong id="c-int">5</strong></span>
+                                <div class="flex gap-1">
+                                    <button onclick="adjustPoint('int', -1)" class="px-2 bg-black border border-green-800 hover:border-green-500 rounded text-xs">-</button>
+                                    <button onclick="adjustPoint('int', 1)" class="px-2 bg-black border border-green-800 hover:border-green-500 rounded text-xs">+</button>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center bg-green-950 p-1 rounded px-2">
+                                <span>CONSTITUIÇÃO: <strong id="c-con">5</strong></span>
+                                <div class="flex gap-1">
+                                    <button onclick="adjustPoint('con', -1)" class="px-2 bg-black border border-green-800 hover:border-green-500 rounded text-xs">-</button>
+                                    <button onclick="adjustPoint('con', 1)" class="px-2 bg-black border border-green-800 hover:border-green-500 rounded text-xs">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="finalizeCharacter()" class="btn-terminal w-full p-2 text-sm rounded font-bold uppercase mt-2">INICIAR JORNADA NO TERMINAL</button>
+                </div>
+
+                <!-- TELA 2: Hub Central (Menu Principal de Opções) -->
+                <div id="screen-hub" class="hidden flex flex-col justify-between h-full space-y-4">
+                    <div class="text-center">
+                        <h2 class="text-lg font-bold tracking-widest text-yellow-400">/// CENTRAL DE OPERAÇÕES ///</h2>
+                        <p class="text-xs text-green-500 italic">Escolha um módulo para prosseguir no terminal.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 flex-grow py-4 justify-center items-center">
+                        <button onclick="enterExploration()" class="btn-terminal h-16 rounded flex flex-col justify-center items-center text-sm font-bold">
+                            <span>🗺️ EXPLORAR MAPA</span>
+                            <span class="text-[10px] font-normal opacity-70">Encontre perigos e saques</span>
+                        </button>
+                        <button onclick="enterMarket()" class="btn-terminal h-16 rounded flex flex-col justify-center items-center text-sm font-bold">
+                            <span>🏪 MERCADO / CIDADE</span>
+                            <span class="text-[10px] font-normal opacity-70">Compre armas, armaduras e poções</span>
+                        </button>
+                        <button onclick="enterExpedition()" class="btn-terminal h-16 rounded flex flex-col justify-center items-center text-sm font-bold">
+                            <span>⏳ EXPEDIÇÃO AUTOMÁTICA</span>
+                            <span class="text-[10px] font-normal opacity-70">Recursos de forma segura</span>
+                        </button>
+                        <button onclick="enterDungeonSelector()" class="btn-terminal h-16 rounded flex flex-col justify-center items-center text-sm font-bold">
+                            <span>💀 EXPLORAR DUNGEONS</span>
+                            <span class="text-[10px] font-normal opacity-70">Ranks e inimigos elite</span>
+                        </button>
+                    </div>
+
+                    <div class="text-center text-xs text-green-600 border-t border-green-950 pt-2 flex justify-between">
+                        <span>PONTOS DE BATALHA: <span id="hub-battle-points" class="text-white font-bold">0</span></span>
+                        <span>DUNGEONS VENCIDAS: <span id="hub-dungeons-cleared" class="text-white font-bold">0</span></span>
+                    </div>
+                </div>
+
+                <!-- TELA 3: Exploração de Mapa -->
+                <div id="screen-map" class="hidden flex flex-col justify-between h-full">
+                    <div class="flex justify-between items-center border-b border-green-800 pb-1 mb-2">
+                        <h3 class="text-sm font-bold" id="map-title">MÓDULO: EXPLORAÇÃO DE MAPA</h3>
+                        <button onclick="leaveToHub()" class="text-xs text-red-400 hover:underline">VOLTAR À CENTRAL</button>
+                    </div>
+
+                    <!-- Div do Desenho do Mapa -->
+                    <div class="flex justify-center items-center bg-neutral-950 p-2 rounded border border-green-950 font-mono tracking-widest text-center leading-none select-none text-base sm:text-lg">
+                        <pre id="ascii-map-render" class="whitespace-pre"></pre>
+                    </div>
+
+                    <p class="text-[11px] text-green-500 text-center mt-1">
+                        Legenda: <b class="text-green-300">0</b> Você | <b class="text-red-500">E</b> Inimigo | <b class="text-yellow-400">$</b> Saída | <b class="text-blue-400">M</b> Mercado | <b class="text-stone-500">#</b> Parede
+                    </p>
+
+                    <!-- Painel de Controles Virtuais do Mapa -->
+                    <div class="flex justify-between items-center mt-2 border-t border-green-950 pt-2">
+                        <span class="text-xs text-green-600">Use W,A,S,D no teclado ou use as setas virtuais</span>
+                        <div class="grid grid-cols-3 gap-1">
+                            <div></div>
+                            <button onclick="movePlayer('W')" class="btn-terminal px-2.5 py-1 text-xs rounded font-bold">▲ W</button>
+                            <div></div>
+                            <button onclick="movePlayer('A')" class="btn-terminal px-2.5 py-1 text-xs rounded font-bold">◀ A</button>
+                            <button onclick="movePlayer('S')" class="btn-terminal px-2.5 py-1 text-xs rounded font-bold">▼ S</button>
+                            <button onclick="movePlayer('D')" class="btn-terminal px-2.5 py-1 text-xs rounded font-bold">▶ D</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TELA 4: Batalha Baseada em Turnos -->
+                <div id="screen-combat" class="hidden flex flex-col justify-between h-full">
+                    <div class="text-center border-b border-red-800 pb-1 mb-2">
+                        <h3 class="text-sm font-bold text-red-500 animate-pulse">ALERTA: COMBATE EM ANDAMENTO!</h3>
+                    </div>
+
+                    <!-- Status do Inimigo e Jogador no Combate -->
+                    <div class="grid grid-cols-2 gap-4 my-2">
+                        <!-- Jogador -->
+                        <div class="bg-neutral-950 p-2 rounded border border-green-900 text-xs">
+                            <p class="font-bold text-green-400" id="combat-player-name">HERÓI</p>
+                            <p>HP: <span id="combat-player-hp" class="text-white">50/50</span></p>
+                            <p>MP: <span id="combat-player-mp" class="text-white">20/20</span></p>
+                        </div>
+                        <!-- Inimigo -->
+                        <div class="bg-neutral-950 p-2 rounded border border-red-900 text-xs text-right">
+                            <p class="font-bold text-red-400" id="combat-enemy-name">MONSTRO</p>
+                            <p>HP: <span id="combat-enemy-hp" class="text-white">40/40</span></p>
+                            <p class="text-[10px] text-gray-500">Nível <span id="combat-enemy-level">1</span> | Tipo <span id="combat-enemy-type">Comum</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Feed específico de logs de combate -->
+                    <div id="combat-log" class="bg-black border border-red-950 rounded p-2 text-[11px] h-24 overflow-y-auto font-mono text-red-300">
+                        <!-- Eventos de batalha aparecem aqui -->
+                    </div>
+
+                    <!-- Botões de Ações de Combate -->
+                    <div class="grid grid-cols-4 gap-1.5 mt-3 pt-2 border-t border-red-950">
+                        <button onclick="combatAction('attack')" class="btn-terminal py-2 text-xs font-bold uppercase rounded">⚔️ Atacar</button>
+                        <button onclick="combatAction('defend')" class="btn-terminal py-2 text-xs font-bold uppercase rounded">🛡️ Defender</button>
+                        <button onclick="combatAction('skill')" id="btn-combat-skill" class="btn-terminal py-2 text-xs font-bold uppercase rounded">✨ Magia/Hab</button>
+                        <button onclick="combatAction('potion')" class="btn-terminal py-2 text-xs font-bold uppercase rounded">🧪 Poção HP</button>
+                    </div>
+                </div>
+
+                <!-- TELA 5: Mercado / Compras e Vendas -->
+                <div id="screen-market" class="hidden flex flex-col justify-between h-full">
+                    <div class="flex justify-between items-center border-b border-green-800 pb-1 mb-2">
+                        <h3 class="text-sm font-bold text-yellow-400">ESTAÇÃO DE MERCADO DA CIDADE</h3>
+                        <button onclick="leaveToHub()" class="text-xs text-red-400 hover:underline">SAIR DO MERCADO</button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-xs flex-grow overflow-y-auto">
+                        <!-- Compras de Armas/Armaduras -->
+                        <div class="border border-green-950 p-2 rounded space-y-1 bg-neutral-950">
+                            <h4 class="font-bold text-green-400 border-b border-green-900 mb-1">EQUIPAMENTOS</h4>
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between items-center">
+                                    <span>🗡️ Espada Longa (+5 ATK)<br><span class="text-[10px] text-yellow-500">Custo: 50g</span></span>
+                                    <button onclick="buyEquipment('weapon', 'Espada Longa', 5, 50)" class="btn-terminal px-1.5 py-0.5 rounded">Comprar</button>
+                                </div>
+                                <div class="flex justify-between items-center border-t border-green-900/40 pt-1">
+                                    <span>🪄 Cajado Rúnico (+5 INT)<br><span class="text-[10px] text-yellow-500">Custo: 60g</span></span>
+                                    <button onclick="buyEquipment('weapon', 'Cajado Rúnico', 5, 60)" class="btn-terminal px-1.5 py-0.5 rounded">Comprar</button>
+                                </div>
+                                <div class="flex justify-between items-center border-t border-green-900/40 pt-1">
+                                    <span>🛡️ Peitoral de Ferro (+5 DEF)<br><span class="text-[10px] text-yellow-500">Custo: 45g</span></span>
+                                    <button onclick="buyEquipment('armor', 'Peitoral de Ferro', 5, 45)" class="btn-terminal px-1.5 py-0.5 rounded">Comprar</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Poções e Serviços -->
+                        <div class="border border-green-950 p-2 rounded space-y-1 bg-neutral-950">
+                            <h4 class="font-bold text-green-400 border-b border-green-900 mb-1">SUPRIMENTOS & ESTALAGEM</h4>
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between items-center">
+                                    <span>🧪 Poção de Cura (HP)<br><span class="text-[10px] text-yellow-500">Custo: 10g</span></span>
+                                    <button onclick="buyConsumable('potion-hp', 10)" class="btn-terminal px-1.5 py-0.5 rounded">Comprar</button>
+                                </div>
+                                <div class="flex justify-between items-center border-t border-green-900/40 pt-1">
+                                    <span>🧪 Poção de Mana (MP)<br><span class="text-[10px] text-yellow-500">Custo: 12g</span></span>
+                                    <button onclick="buyConsumable('potion-mp', 12)" class="btn-terminal px-1.5 py-0.5 rounded">Comprar</button>
+                                </div>
+                                <div class="flex justify-between items-center border-t border-green-900/40 pt-1">
+                                    <span>🛌 Descansar na Taverna (HP/MP Máx)<br><span class="text-[10px] text-yellow-500">Custo: 15g</span></span>
+                                    <button onclick="buyRest(15)" class="btn-terminal px-1.5 py-0.5 rounded">Descansar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center text-[10px] text-green-500 mt-2 pt-1 border-t border-green-950">
+                        Ouro disponível: <b class="text-yellow-400" id="market-gold">0g</b> | Seus equipamentos serão atualizados automaticamente ao comprar itens melhores.
+                    </div>
+                </div>
+
+                <!-- TELA 6: Expedições Temporizadas -->
+                <div id="screen-expedition" class="hidden flex flex-col justify-between h-full">
+                    <div class="flex justify-between items-center border-b border-green-800 pb-1 mb-2">
+                        <h3 class="text-sm font-bold text-yellow-500">MÓDULO: EXPEDIÇÃO DE EXPLORADORES</h3>
+                        <button onclick="leaveToHub()" class="text-xs text-red-400 hover:underline">Sair</button>
+                    </div>
+
+                    <div class="space-y-3 text-xs flex-grow overflow-y-auto">
+                        <p class="text-green-400">Envie seu personagem para expedições automatizadas no background do terminal. Colete ouro, experiência e possíveis itens de dungeon enquanto está seguro.</p>
+                        
+                        <div class="bg-neutral-950 p-2 rounded border border-green-950">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-bold">🏔️ Mina de Carvão Abandonada (Rápida)</p>
+                                    <p class="text-[10px] text-green-600">Tempo: 10s | Recompensa: EXP baixa + Pouco Ouro</p>
+                                </div>
+                                <button onclick="startExpedition('mina', 10)" id="btn-exp-mina" class="btn-terminal px-2.5 py-1 rounded">Enviar</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-neutral-950 p-2 rounded border border-green-950">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-bold">🌲 Floresta Nebulosa (Moderada)</p>
+                                    <p class="text-[10px] text-green-600">Tempo: 30s | Recompensa: EXP média + Ouro médio</p>
+                                </div>
+                                <button onclick="startExpedition('floresta', 30)" id="btn-exp-floresta" class="btn-terminal px-2.5 py-1 rounded">Enviar</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-neutral-950 p-2 rounded border border-green-950">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-bold">🌋 Profundezas do Vulcão (Perigosa)</p>
+                                    <p class="text-[10px] text-green-600">Tempo: 60s | Recompensa: Alto EXP + Muito Ouro</p>
+                                </div>
+                                <button onclick="startExpedition('vulcao', 60)" id="btn-exp-vulcao" class="btn-terminal px-2.5 py-1 rounded">Enviar</button>
+                            </div>
+                        </div>
+
+                        <!-- Indicador de progresso de expedição ativa -->
+                        <div id="expedition-progress-container" class="hidden bg-black border border-yellow-500 rounded p-2 text-center">
+                            <p class="font-bold text-yellow-400" id="exp-progress-title">Expedição em progresso...</p>
+                            <p class="text-xs text-gray-400 mb-1">Retorno estimado em: <span id="exp-timer">0</span> segundos</p>
+                            <div class="w-full bg-yellow-950 h-2 rounded overflow-hidden">
+                                <div id="exp-progress-bar" class="bg-yellow-400 h-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TELA 7: Seletor de Dungeons -->
+                <div id="screen-dungeon" class="hidden flex flex-col justify-between h-full">
+                    <div class="flex justify-between items-center border-b border-green-800 pb-1 mb-2">
+                        <h3 class="text-sm font-bold text-red-500">DUNGEONS DE ELITE DISPONÍVEIS</h3>
+                        <button onclick="leaveToHub()" class="text-xs text-red-400 hover:underline">Sair</button>
+                    </div>
+
+                    <p class="text-xs text-green-400 mb-2">Dungeons de elite testarão sua capacidade ao limite. Derrote o chefe final para aumentar seu rank de batalha permanentemente!</p>
+
+                    <div class="space-y-2 flex-grow overflow-y-auto">
+                        <div class="bg-neutral-950 p-2.5 rounded border border-red-950 flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold text-red-400">💀 Catacumbas Sombrias (Nível Rec. 1-3)</h4>
+                                <p class="text-[10px] text-gray-400">4 Encontros de combate | Chefe: Esqueleto Gigante</p>
+                            </div>
+                            <button onclick="startDungeon('catacumbas', 1, 4)" class="btn-terminal px-3 py-1.5 rounded text-xs font-bold">ENTRAR</button>
+                        </div>
+
+                        <div class="bg-neutral-950 p-2.5 rounded border border-red-950 flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold text-red-400">🐉 Caverna dos Dragões (Nível Rec. 4-6)</h4>
+                                <p class="text-[10px] text-gray-400">5 Encontros de combate | Chefe: Dragão de Fogo</p>
+                            </div>
+                            <button onclick="startDungeon('caverna', 4, 5)" class="btn-terminal px-3 py-1.5 rounded text-xs font-bold">ENTRAR</button>
+                        </div>
+
+                        <div class="bg-neutral-950 p-2.5 rounded border border-red-950 flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold text-red-400">👑 Abismo do Caos (Nível Rec. 7+)</h4>
+                                <p class="text-[10px] text-gray-400">6 Encontros de combate | Chefe: Lich Rei</p>
+                            </div>
+                            <button onclick="startDungeon('abismo', 7, 6)" class="btn-terminal px-3 py-1.5 rounded text-xs font-bold">ENTRAR</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TELA 8: Tela de Game Over / Resumo de Vitória -->
+                <div id="screen-gameover" class="hidden flex flex-col justify-between h-full text-center">
+                    <div>
+                        <h2 id="gameover-title" class="text-2xl font-bold text-red-500 tracking-widest mt-6">--- GAME OVER ---</h2>
+                        <p id="gameover-desc" class="text-sm text-green-400 mt-4 px-4">O herói sucumbiu aos perigos do terminal. O arquivo de save precisará ser redefinido ou você pode recarregar o último ponto de restauração válido.</p>
+                    </div>
+
+                    <div class="space-y-3 pb-6">
+                        <button onclick="reviveOrReload()" class="btn-terminal w-full p-2 text-sm rounded font-bold uppercase">RESTAURAR ÚLTIMO SAVE</button>
+                        <button onclick="resetGame()" class="btn-terminal w-full p-2 text-sm rounded font-bold uppercase text-red-500 border-red-900">RECOMENÇAR TOTALMENTE</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- PAINEL DE COMANDOS / FEEDLOGS -->
+            <div class="terminal-border bg-black p-3 rounded h-[180px] flex flex-col justify-between">
+                <div class="text-[10px] text-green-600 font-bold uppercase flex justify-between border-b border-green-950 pb-1 mb-1">
+                    <span>📋 LOG DE EVENTOS DO SISTEMA</span>
+                    <span>Modo: Interativo</span>
+                </div>
+                <!-- Div do feed de textos do terminal -->
+                <div id="terminal-feed" class="flex-grow overflow-y-auto text-xs text-green-300 font-mono space-y-1 pr-1">
+                    <p class="text-yellow-400">>> [SISTEMA] Aguardando criação ou carregamento de ficha do jogador...</p>
+                    <p class="text-gray-500">>> Digite os atributos ou use os botões rápidos acima para definir seu personagem.</p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- PAINEL DIREITO: Enciclopédia Rápida e Informações do Universo -->
+        <section class="lg:col-span-3 terminal-border bg-black p-4 rounded flex flex-col justify-between text-xs space-y-4">
+            <div>
+                <h3 class="text-sm font-bold text-center border-b border-green-800 pb-1 mb-3">/// ARQUIVOS DO TERMINAL ///</h3>
+                
+                <div class="space-y-3">
+                    <div>
+                        <h4 class="font-bold text-white mb-0.5">ESTRUTURA DO MAPA:</h4>
+                        <p class="text-gray-400 leading-relaxed">Cada caractere representa um quadrante no terminal:</p>
+                        <ul class="list-disc list-inside mt-1 space-y-0.5 text-gray-500">
+                            <li><b class="text-green-400">0</b>: Sua localização atual.</li>
+                            <li><b class="text-red-400">E</b>: Inimigos locais.</li>
+                            <li><b class="text-yellow-400">$</b>: Baú do tesouro.</li>
+                            <li><b class="text-blue-400">M</b>: Portal para o mercado.</li>
+                            <li><b class="text-stone-500">#</b>: Fronteira intransponível.</li>
+                        </ul>
+                    </div>
+
+                    <div class="border-t border-green-900 pt-2">
+                        <h4 class="font-bold text-white mb-0.5">RANKS DE BATALHA:</h4>
+                        <p class="text-gray-400">Suba seu rank derrotando inimigos de Elite nas Dungeons:</p>
+                        <p class="text-green-500 mt-1 font-bold">D -> C -> B -> A -> S -> MASTER</p>
+                        <p class="text-gray-500 mt-1">Sua força de ataque básico escala de acordo com seu Rank de Batalha atual.</p>
+                    </div>
+
+                    <div class="border-t border-green-900 pt-2">
+                        <h4 class="font-bold text-white mb-0.5">COMBATE RETRÔ:</h4>
+                        <p class="text-gray-400 leading-relaxed">Selecione <b class="text-green-400">Defender</b> para reduzir o próximo ataque recebido pela metade e regenerar 3 MP.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rodapé / Instruções de Teclado -->
+            <div class="border-t border-green-900 pt-2 text-[10px] text-green-600">
+                <p class="text-center font-bold">CONTROLES DE TECLADO:</p>
+                <div class="grid grid-cols-2 gap-1 mt-1">
+                    <div><b>W/A/S/D</b>: Mover</div>
+                    <div><b>1,2,3,4</b>: Combate</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Geral -->
+    <footer class="max-w-6xl w-full mx-auto mt-4 text-center text-xs text-green-700 border-t border-green-950 pt-2">
+        <p>© 2026 TERMINAL QUEST. FEITO EM PURO HTML5/JS/CSS SEM FRAMES DE GRAFICOS.</p>
+    </footer>
+
+    <!-- LÓGICA DE JOGO EM JAVASCRIPT -->
+    <script>
+        // CONFIGURAÇÕES GERAIS E ATRIBUTOS INICIAIS
+        let player = {
+            name: "Aventureiro",
+            class: "Guerreiro",
+            level: 1,
+            exp: 0,
+            maxExp: 100,
+            hp: 40,
+            maxHp: 40,
+            mp: 15,
+            maxMp: 15,
+            attributes: {
+                for: 5,
+                des: 5,
+                int: 5,
+                con: 5
+            },
+            equipment: {
+                weapon: { name: "Adaga Inicial", power: 1 },
+                armor: { name: "Trapos de Couro", defense: 1 }
+            },
+            gold: 25,
+            potions: {
+                hp: 2,
+                mp: 1
+            },
+            statsCalculated: {},
+            battlePoints: 0,
+            battleRank: "D",
+            dungeonsCleared: 0
+        };
+
+        // Estado das telas e variáveis globais de jogo
+        let currentScreen = "creation";
+        let mapGrid = [];
+        let playerPos = { x: 1, y: 1 };
+        let activeCombat = null;
+        let expeditionActive = false;
+        let expeditionTimer = null;
+        let dungeonActive = false;
+        let dungeonStatus = {
+            name: "",
+            maxEncounters: 0,
+            currentEncounter: 0,
+            enemyLevel: 1
+        };
+
+        // Pontos na criação de personagem
+        let creationPointsAvailable = 10;
+        const baseAttributes = {
+            Guerreiro: { for: 8, des: 4, int: 3, con: 7, hp: 50, mp: 10 },
+            Mago: { for: 3, des: 4, int: 9, con: 4, hp: 30, mp: 30 },
+            Ladino: { for: 4, des: 8, int: 4, con: 4, hp: 35, mp: 15 }
+        };
+
+        // Inicialização do Jogo
+        window.onload = function() {
+            // Verificar se temos dados salvos no localStorage
+            loadGame();
+
+            // Setup de botões do teclado para controle geral do jogo
+            document.addEventListener('keydown', handleKeyboardInput);
+        };
+
+        // CARREGA / SALVA / RESETA JOGO VIA LOCAL STORAGE
+        function saveGame() {
+            try {
+                localStorage.setItem("terminal_quest_save", JSON.stringify(player));
+                addTerminalLog(">> [SISTEMA] Jogo salvo com sucesso no LocalStorage!", "yellow");
+                
+                // Pisca indicador verde de save
+                const saveIndicator = document.getElementById("save-status");
+                saveIndicator.textContent = "Save Local: ATUALIZADO";
+                setTimeout(() => {
+                    saveIndicator.textContent = "Save Local: OK";
+                }, 2000);
+            } catch (e) {
+                addTerminalLog(">> [SISTEMA] Falha ao salvar no cache local.", "red");
+            }
+        }
+
+        function loadGame() {
+            try {
+                const saved = localStorage.getItem("terminal_quest_save");
+                if (saved) {
+                    player = JSON.parse(saved);
+                    // Recalcular atributos de vida e status com base no carregamento
+                    recalculateStats();
+                    updateUI();
+                    
+                    // Pular direto para o HUB se o personagem já existe
+                    switchScreen("hub");
+                    addTerminalLog(`>> [SISTEMA] Bem-vindo de volta, ${player.name}! Save carregado.`, "yellow");
+                } else {
+                    // Configuração inicial de criação de personagem
+                    selectClass("Guerreiro");
+                    addTerminalLog(">> [SISTEMA] Crie seu aventureiro para começar a jornada.");
+                }
+            } catch (e) {
+                addTerminalLog(">> [SISTEMA] Nenhum save anterior encontrado ou erro ao carregar.");
+            }
+        }
+
+        function resetGamePrompt() {
+            const confirmReset = confirm("Deseja mesmo redefinir TODA a sua jornada? Todo o progresso será perdido.");
+            if (confirmReset) {
+                resetGame();
+            }
+        }
+
+        function resetGame() {
+            localStorage.removeItem("terminal_quest_save");
+            // Resetar objeto do jogador para padrões
+            player = {
+                name: "Aventureiro",
+                class: "Guerreiro",
+                level: 1,
+                exp: 0,
+                maxExp: 100,
+                hp: 40,
+                maxHp: 40,
+                mp: 15,
+                maxMp: 15,
+                attributes: { for: 5, des: 5, int: 5, con: 5 },
+                equipment: {
+                    weapon: { name: "Adaga Inicial", power: 1 },
+                    armor: { name: "Trapos de Couro", defense: 1 }
+                },
+                gold: 25,
+                potions: { hp: 2, mp: 1 },
+                battlePoints: 0,
+                battleRank: "D",
+                dungeonsCleared: 0
+            };
+            creationPointsAvailable = 10;
+            switchScreen("creation");
+            selectClass("Guerreiro");
+            updateUI();
+            addTerminalLog(">> [SISTEMA] Terminal reiniciado. Ficha de personagem limpa.");
+        }
+
+        // TELA 1: FUNÇÕES DE CRIAÇÃO DO PERSONAGEM
+        function selectClass(className) {
+            player.class = className;
+            // Destaca botão selecionado
+            ["Guerreiro", "Mago", "Ladino"].forEach(c => {
+                const btn = document.getElementById(`btn-class-${c}`);
+                if (c === className) {
+                    btn.classList.add("bg-green-500", "text-black");
+                } else {
+                    btn.classList.remove("bg-green-500", "text-black");
+                }
+            });
+
+            // Reseta atributos base conforme a classe selecionada
+            const base = baseAttributes[className];
+            player.attributes.for = base.for;
+            player.attributes.des = base.des;
+            player.attributes.int = base.int;
+            player.attributes.con = base.con;
+            player.maxHp = base.hp;
+            player.hp = base.hp;
+            player.maxMp = base.mp;
+            player.mp = base.mp;
+
+            // Ajusta pontos de criação livres
+            creationPointsAvailable = 10;
+
+            // Descrições personalizadas
+            const desc = document.getElementById("class-desc");
+            if (className === "Guerreiro") {
+                desc.textContent = "Guerreiro: Altas reservas de vida física. Habilidades escalam com FORÇA.";
+            } else if (className === "Mago") {
+                desc.textContent = "Mago: Mestre em magias arcanas. Magia e autocura escalam com INTELIGÊNCIA.";
+            } else {
+                desc.textContent = "Ladino: Ágil e letal. Alta chance de esquiva baseada em DESTREZA.";
+            }
+
+            updateCreationUI();
+        }
+
+        function adjustPoint(attr, val) {
+            const baseClassAttr = baseAttributes[player.class][attr];
+            
+            if (val > 0 && creationPointsAvailable > 0) {
+                player.attributes[attr]++;
+                creationPointsAvailable--;
+            } else if (val < 0 && player.attributes[attr] > baseClassAttr) {
+                player.attributes[attr]--;
+                creationPointsAvailable++;
+            }
+            updateCreationUI();
+        }
+
+        function resetPoints() {
+            selectClass(player.class);
+        }
+
+        function updateCreationUI() {
+            document.getElementById("creation-points").textContent = creationPointsAvailable;
+            document.getElementById("c-for").textContent = player.attributes.for;
+            document.getElementById("c-des").textContent = player.attributes.des;
+            document.getElementById("c-int").textContent = player.attributes.int;
+            document.getElementById("c-con").textContent = player.attributes.con;
+        }
+
+        function finalizeCharacter() {
+            const nameInput = document.getElementById("input-name").value.trim();
+            if (nameInput === "") {
+                addTerminalLog(">> [AVISO] Digite um nome válido para seu herói!", "red");
+                return;
+            }
+            player.name = nameInput;
+
+            // Atributos base calculados
+            recalculateStats();
+            
+            // Vida cheia para começar
+            player.hp = player.maxHp;
+            player.mp = player.maxMp;
+
+            addTerminalLog(`>> [HERÓI] ${player.name}, o ${player.class}, foi criado!`, "yellow");
+            addTerminalLog(`>> Atributos finais definidos! Iniciando simulação de exploração...`);
+
+            // Salvar automaticamente após criar
+            saveGame();
+            updateUI();
+            switchScreen("hub");
+        }
+
+        // RECALCULO DE STATUS DO JOGADOR BASEADO EM ATRIBUTOS
+        function recalculateStats() {
+            // HP escala com constituição: maxHP = BaseClasse + (Constituição * 5)
+            const classBase = baseAttributes[player.class] || { hp: 40, mp: 15 };
+            player.maxHp = classBase.hp + (player.attributes.con * 5);
+            player.maxMp = classBase.mp + (player.attributes.int * 3);
+
+            // Garante que o HP/MP não estoure o máximo caso mude nível
+            if (player.hp > player.maxHp) player.hp = player.maxHp;
+            if (player.mp > player.maxMp) player.mp = player.maxMp;
+
+            // Determinar Rank de Batalha com base nos pontos de batalha conquistados
+            if (player.battlePoints < 50) player.battleRank = "D";
+            else if (player.battlePoints < 150) player.battleRank = "C";
+            else if (player.battlePoints < 350) player.battleRank = "B";
+            else if (player.battlePoints < 700) player.battleRank = "A";
+            else if (player.battlePoints < 1200) player.battleRank = "S";
+            else player.battleRank = "MASTER";
+        }
+
+        // TELA 2: GESTÃO DO HUB CENTRAL
+        function leaveToHub() {
+            if (activeCombat) {
+                addTerminalLog(">> [COMBATE] Você não pode abandonar o terminal durante uma batalha ativa!", "red");
+                return;
+            }
+            switchScreen("hub");
+        }
+
+        function enterExploration() {
+            generateMap();
+            switchScreen("map");
+            addTerminalLog(">> [MÓDULO DE MAPA] Digite W/A/S/D ou use os botões direcionais para mover.");
+        }
+
+        function enterMarket() {
+            switchScreen("market");
+            addTerminalLog(">> [ESTAÇÃO MERCADO] Fornecedores conectados. Ouro disponível: " + player.gold + "g");
+        }
+
+        function enterExpedition() {
+            switchScreen("expedition");
+            updateExpeditionUI();
+        }
+
+        function enterDungeonSelector() {
+            switchScreen("dungeon");
+        }
+
+        // NAVEGAÇÃO DE TELAS GERAIS DO TERMINAL
+        function switchScreen(screenName) {
+            currentScreen = screenName;
+            
+            // Oculta todas as telas dinâmicas
+            const screens = [
+                "screen-creation", "screen-hub", "screen-map", 
+                "screen-combat", "screen-market", "screen-expedition", 
+                "screen-dungeon", "screen-gameover"
+            ];
+            screens.forEach(s => {
+                document.getElementById(s).classList.add("hidden");
+            });
+
+            // Mostra apenas a atual
+            document.getElementById(`screen-${screenName}`).classList.remove("hidden");
+            
+            // Ações extras específicas de troca de tela
+            if (screenName === "market") {
+                document.getElementById("market-gold").textContent = player.gold + "g";
+            } else if (screenName === "hub") {
+                document.getElementById("hub-battle-points").textContent = player.battlePoints;
+                document.getElementById("hub-dungeons-cleared").textContent = player.dungeonsCleared;
+            }
+
+            updateUI();
+        }
+
+        // TELA 3: SISTEMA DE MAPA CARACTERES PROCEDURAL
+        function generateMap() {
+            // Cria um mapa simples 7x15
+            const height = 7;
+            const width = 15;
+            mapGrid = [];
+
+            // Preenche mapa inicial com paredes '#' e espaços vazios '.'
+            for (let y = 0; y < height; y++) {
+                let row = [];
+                for (let x = 0; x < width; x++) {
+                    // Bordas exteriores são paredes
+                    if (y === 0 || y === height - 1 || x === 0 || x === width - 1) {
+                        row.push("#");
+                    } else {
+                        // 15% de chance de parede interna obstrutiva, exceto no início do jogador
+                        if (Math.random() < 0.15) {
+                            row.push("#");
+                        } else {
+                            row.push(".");
+                        }
+                    }
+                }
+                mapGrid.push(row);
+            }
+
+            // Define posição inicial segura do jogador
+            playerPos = { x: 2, y: 3 };
+            mapGrid[playerPos.y][playerPos.x] = "."; // Garante chão limpo no início
+
+            // Espalhar de 2 a 3 inimigos ('E') no mapa
+            let enemiesPlaced = 0;
+            while (enemiesPlaced < 2) {
+                let rx = Math.floor(Math.random() * (width - 2)) + 1;
+                let ry = Math.floor(Math.random() * (height - 2)) + 1;
+                if (mapGrid[ry][rx] === "." && (rx !== playerPos.x || ry !== playerPos.y)) {
+                    mapGrid[ry][rx] = "E";
+                    enemiesPlaced++;
+                }
+            }
+
+            // Colocar 1 baú de tesouro ('$') longe do jogador
+            let treasurePlaced = false;
+            while (!treasurePlaced) {
+                let rx = Math.floor(Math.random() * (width - 2)) + 1;
+                let ry = Math.floor(Math.random() * (height - 2)) + 1;
+                if (mapGrid[ry][rx] === "." && (rx !== playerPos.x || ry !== playerPos.y)) {
+                    mapGrid[ry][rx] = "$";
+                    treasurePlaced = true;
+                }
+            }
+
+            // Colocar 1 portal de retorno ao mercado rápido ('M')
+            let marketPlaced = false;
+            while (!marketPlaced) {
+                let rx = Math.floor(Math.random() * (width - 2)) + 1;
+                let ry = Math.floor(Math.random() * (height - 2)) + 1;
+                if (mapGrid[ry][rx] === "." && (rx !== playerPos.x || ry !== playerPos.y) && mapGrid[ry][rx] !== "$") {
+                    mapGrid[ry][rx] = "M";
+                    marketPlaced = true;
+                }
+            }
+
+            renderMap();
+        }
+
+        function renderMap() {
+            let view = "";
+            for (let y = 0; y < mapGrid.length; y++) {
+                let rowStr = "";
+                for (let x = 0; x < mapGrid[y].length; x++) {
+                    if (x === playerPos.x && y === playerPos.y) {
+                        rowStr += "0"; // Jogador
+                    } else {
+                        rowStr += mapGrid[y][x];
+                    }
+                }
+                view += rowStr + "\n";
+            }
+            document.getElementById("ascii-map-render").textContent = view;
+        }
+
+        function movePlayer(dir) {
+            if (currentScreen !== "map") return;
+
+            let nextX = playerPos.x;
+            let nextY = playerPos.y;
+
+            if (dir === "W" || dir === "w") nextY--;
+            if (dir === "S" || dir === "s") nextY++;
+            if (dir === "A" || dir === "a") nextX--;
+            if (dir === "D" || dir === "d") nextX++;
+
+            // Verificar colisão
+            if (mapGrid[nextY] && mapGrid[nextY][nextX]) {
+                const cell = mapGrid[nextY][nextX];
+                
+                if (cell === "#") {
+                    addTerminalLog(">> [MOVIMENTO] Caminho bloqueado por uma parede rústica.", "gray");
+                    return; // Bloqueado
+                }
+
+                // Move o herói
+                playerPos.x = nextX;
+                playerPos.y = nextY;
+                renderMap();
+
+                // Processar evento de colisão
+                if (cell === "E") {
+                    // Remover o inimigo do mapa antes de lutar para evitar loops
+                    mapGrid[playerPos.y][playerPos.x] = ".";
+                    renderMap();
+                    startCombat(false); // Inicia combate regular
+                } else if (cell === "$") {
+                    // Coletar tesouro
+                    mapGrid[playerPos.y][playerPos.x] = ".";
+                    renderMap();
+                    lootTreasure();
+                } else if (cell === "M") {
+                    // Portal de volta à cidade / mercado
+                    addTerminalLog(">> [PORTAL] Você pisou no terminal de transferência urbana. Entrando no mercado...");
+                    enterMarket();
+                }
+            }
+        }
+
+        function lootTreasure() {
+            const goldEarned = Math.floor(Math.random() * 25) + 15;
+            const expEarned = Math.floor(Math.random() * 20) + 15;
+            player.gold += goldEarned;
+            
+            addTerminalLog(`>> [BAÚ] Você encontrou uma mala com ${goldEarned}g e decodificou dados rendendo +${expEarned} EXP!`, "yellow");
+            gainExp(expEarned);
+            saveGame();
+        }
+
+        // TELA 4: SISTEMA DE COMBATE RETRÔ POR TURNOS
+        function startCombat(isElite, customName = "") {
+            activeCombat = {
+                isElite: isElite,
+                playerTurn: true,
+                playerDefending: false,
+                enemy: {
+                    name: customName || getRandomEnemyName(isElite),
+                    level: isElite ? player.level + 1 : Math.max(1, player.level),
+                    hp: 0,
+                    maxHp: 0,
+                    attackPower: 0,
+                    type: isElite ? "Elite / Chefe" : "Comum"
+                }
+            };
+
+            // Cálculo dos status do inimigo baseado no nível dele e tipo
+            const multiplier = isElite ? 15 : 8;
+            activeCombat.enemy.maxHp = activeCombat.enemy.level * multiplier + 15;
+            activeCombat.enemy.hp = activeCombat.enemy.maxHp;
+            activeCombat.enemy.attackPower = Math.ceil(activeCombat.enemy.level * (isElite ? 4 : 2.2) + 2);
+
+            switchScreen("combat");
+            
+            // Limpa log de combate e inicia com mensagens
+            const combatLog = document.getElementById("combat-log");
+            combatLog.innerHTML = "";
+            addCombatLog(`💥 Um ${activeCombat.enemy.name} (${activeCombat.enemy.type}) barra seu caminho!`);
+            addCombatLog(`Sua Ação! Escolha como lutar.`);
+
+            // Ajustar o botão de habilidade especial conforme a classe do jogador
+            const skillBtn = document.getElementById("btn-combat-skill");
+            if (player.class === "Guerreiro") {
+                skillBtn.textContent = "💥 Golpear (5 MP)";
+            } else if (player.class === "Mago") {
+                skillBtn.textContent = "🔥 Bola Fogo (7 MP)";
+            } else if (player.class === "Ladino") {
+                skillBtn.textContent = "🗡️ Ataque Furtivo (5 MP)";
+            }
+
+            updateCombatUI();
+        }
+
+        function getRandomEnemyName(isElite) {
+            const common = ["Rato Mutante", "Hacker Renegado", "Vigia de Sucata", "Drone Invasor", "Gosma de Ácido", "Gárgula de Pedra"];
+            const elite = ["Megalodon Mecânico", "Esqueleto Gigante de Titânio", "Dragão de Fogo de Silício", "Lich Rei do Kernel", "Software Corrompido Alfa"];
+            if (isElite) {
+                return elite[Math.floor(Math.random() * elite.length)];
+            }
+            return common[Math.floor(Math.random() * common.length)];
+        }
+
+        function updateCombatUI() {
+            if (!activeCombat) return;
+
+            document.getElementById("combat-player-name").textContent = `${player.name} (${player.class})`;
+            document.getElementById("combat-player-hp").textContent = `${player.hp}/${player.maxHp}`;
+            document.getElementById("combat-player-mp").textContent = `${player.mp}/${player.maxMp}`;
+
+            document.getElementById("combat-enemy-name").textContent = activeCombat.enemy.name;
+            document.getElementById("combat-enemy-hp").textContent = `${activeCombat.enemy.hp}/${activeCombat.enemy.maxHp}`;
+            document.getElementById("combat-enemy-level").textContent = activeCombat.enemy.level;
+            document.getElementById("combat-enemy-type").textContent = activeCombat.enemy.type;
+        }
+
+        function combatAction(action) {
+            if (!activeCombat || !activeCombat.playerTurn) return;
+
+            activeCombat.playerDefending = false;
+
+            // Turno do Jogador
+            if (action === 'attack') {
+                // Dano baseado em Força ou Destreza e Rank de Batalha
+                let baseDmg = player.class === "Ladino" ? player.attributes.des : player.attributes.for;
+                
+                // Bônus do Rank de Batalha
+                let rankBonus = 1;
+                if (player.battleRank === "C") rankBonus = 1.2;
+                else if (player.battleRank === "B") rankBonus = 1.5;
+                else if (player.battleRank === "A") rankBonus = 1.8;
+                else if (player.battleRank === "S") rankBonus = 2.2;
+                else if (player.battleRank === "MASTER") rankBonus = 3.0;
+
+                let damage = Math.ceil((baseDmg + player.equipment.weapon.power + Math.floor(Math.random() * 5)) * rankBonus);
+                
+                activeCombat.enemy.hp -= damage;
+                addCombatLog(`>> Você atacou ${activeCombat.enemy.name} causando ${damage} de dano físico!`);
+            } 
+            else if (action === 'defend') {
+                activeCombat.playerDefending = true;
+                // Recuperar um pouquinho de Mana ao defender
+                player.mp = Math.min(player.maxMp, player.mp + 3);
+                addCombatLog(`>> Você tomou postura defensiva! Dano sofrido cortado pela metade nesta rodada e +3 MP restaurado.`);
+            } 
+            else if (action === 'skill') {
+                let manaCost = player.class === "Mago" ? 7 : 5;
+                if (player.mp < manaCost) {
+                    addCombatLog(`>> [AVISO] Falha! Você não tem Mana suficiente (${manaCost} MP necessários).`, "yellow");
+                    return;
+                }
+                player.mp -= manaCost;
+
+                let dmg = 0;
+                if (player.class === "Guerreiro") {
+                    dmg = Math.ceil(player.attributes.for * 2.5 + player.equipment.weapon.power);
+                    addCombatLog(`>> [HABILIDADE] Você desferiu um GOLPE PESADO no alvo causando ${dmg} de dano!`);
+                } else if (player.class === "Mago") {
+                    dmg = Math.ceil(player.attributes.int * 3.5);
+                    addCombatLog(`>> [MAGIA] Bola de Fogo invocada! Alvo incinerado por ${dmg} de dano mágico!`);
+                } else if (player.class === "Ladino") {
+                    dmg = Math.ceil(player.attributes.des * 3.0);
+                    addCombatLog(`>> [HABILIDADE] Você atacou pelas sombras! Dano furtivo de ${dmg}!`);
+                }
+                activeCombat.enemy.hp -= dmg;
+            } 
+            else if (action === 'potion') {
+                if (player.potions.hp <= 0) {
+                    addCombatLog(">> [AVISO] Falha! Sem Poções de Cura no inventário.", "yellow");
+                    return;
+                }
+                player.potions.hp--;
+                const healAmt = Math.ceil(player.maxHp * 0.5); // Cura 50%
+                player.hp = Math.min(player.maxHp, player.hp + healAmt);
+                addCombatLog(`>> [LOG] Você bebeu uma poção de cura e restaurou ${healAmt} de HP!`);
+            }
+
+            // Garante que o inimigo não fique negativo
+            if (activeCombat.enemy.hp < 0) activeCombat.enemy.hp = 0;
+            updateCombatUI();
+            updateUI();
+
+            // Verificar se o inimigo morreu
+            if (activeCombat.enemy.hp <= 0) {
+                endCombat(true);
+                return;
+            }
+
+            // Alternar para o turno do inimigo
+            activeCombat.playerTurn = false;
+            setTimeout(enemyTurn, 1000);
+        }
+
+        function enemyTurn() {
+            if (!activeCombat || activeCombat.enemy.hp <= 0) return;
+
+            // IA Inimiga Básica
+            let enemyDamage = Math.ceil(activeCombat.enemy.attackPower + Math.floor(Math.random() * 3));
+            
+            // Corta dano na metade se defendendo
+            if (activeCombat.playerDefending) {
+                enemyDamage = Math.ceil(enemyDamage / 2);
+            }
+
+            // Aplicar mitigação de dano da Armadura do Jogador
+            const armorDefense = player.equipment.armor.defense;
+            enemyDamage = Math.max(1, enemyDamage - armorDefense);
+
+            player.hp -= enemyDamage;
+            if (player.hp < 0) player.hp = 0;
+
+            addCombatLog(`💥 O ${activeCombat.enemy.name} ataca você causando ${enemyDamage} de dano!`);
+            updateCombatUI();
+            updateUI();
+
+            // Verificar se jogador morreu
+            if (player.hp <= 0) {
+                endCombat(false);
+                return;
+            }
+
+            activeCombat.playerTurn = true;
+            addCombatLog("Seu turno de agir!");
+        }
+
+        function endCombat(playerWon) {
+            if (playerWon) {
+                const isElite = activeCombat.isElite;
+                // Recompensas escalam com o nível do inimigo
+                const baseGold = isElite ? 40 : 10;
+                const baseExp = isElite ? 45 : 15;
+                const goldGained = Math.ceil(baseGold + Math.floor(Math.random() * 15) * activeCombat.enemy.level);
+                const expGained = Math.ceil(baseExp + Math.floor(Math.random() * 10) * activeCombat.enemy.level);
+                const bpGained = isElite ? 50 : 10;
+
+                player.gold += goldGained;
+                player.battlePoints += bpGained;
+                
+                addTerminalLog(`>> [VITÓRIA] Você abateu ${activeCombat.enemy.name}!`, "yellow");
+                addTerminalLog(`>> Recompensas de Batalha: +${goldGained} Ouro | +${expGained} EXP | +${bpGained} BP`, "yellow");
+                
+                gainExp(expGained);
+                recalculateStats();
+
+                // Se era de Dungeon Elite, processar progresso da dungeon
+                if (dungeonActive) {
+                    dungeonStatus.currentEncounter++;
+                    if (dungeonStatus.currentEncounter >= dungeonStatus.maxEncounters) {
+                        // Vitória Total da Dungeon
+                        player.dungeonsCleared++;
+                        player.gold += 100; // Super bônus
+                        addTerminalLog(`>> [DUNGEON COMPLETADA] Você limpou ${dungeonStatus.name} e derrotou o Chefe final! +100g de bônus!`, "yellow");
+                        dungeonActive = false;
+                        saveGame();
+                        activeCombat = null;
+                        switchScreen("hub");
+                    } else {
+                        // Próximo encontro da dungeon
+                        addTerminalLog(`>> Encontro ${dungeonStatus.currentEncounter} de ${dungeonStatus.maxEncounters} vencido! Continuando dungeon...`);
+                        activeCombat = null;
+                        setTimeout(() => {
+                            // Se o último for o boss
+                            const isBoss = dungeonStatus.currentEncounter === dungeonStatus.maxEncounters - 1;
+                            startCombat(isBoss, isBoss ? "Chefe Final da Catacumba" : "");
+                        }, 1500);
+                    }
+                } else {
+                    activeCombat = null;
+                    saveGame();
+                    // Volta à tela apropriada
+                    switchScreen("map");
+                }
+            } else {
+                // Derrota
+                addTerminalLog(`>> [DERROTA] O herói caiu em batalha! Suas energias vitais falharam.`, "red");
+                activeCombat = null;
+                dungeonActive = false;
+                switchScreen("gameover");
+            }
+        }
+
+        function addCombatLog(msg) {
+            const combatLog = document.getElementById("combat-log");
+            const p = document.createElement("p");
+            p.textContent = msg;
+            combatLog.appendChild(p);
+            combatLog.scrollTop = combatLog.scrollHeight;
+        }
+
+        // TELA 5: SISTEMA DE COMPRA / VENDA DE ITENS E EQUIPAMENTOS
+        function buyEquipment(type, name, power, cost) {
+            if (player.gold < cost) {
+                addTerminalLog(">> [MERCADO] Você não possui créditos de ouro suficientes!", "red");
+                return;
+            }
+
+            player.gold -= cost;
+            if (type === 'weapon') {
+                player.equipment.weapon = { name: name, power: power };
+                addTerminalLog(`>> [MERCADO] Você adquiriu a arma: ${name} (+${power} ATK)!`, "yellow");
+            } else if (type === 'armor') {
+                player.equipment.armor = { name: name, defense: power };
+                addTerminalLog(`>> [MERCADO] Você adquiriu a armadura: ${name} (+${power} DEF)!`, "yellow");
+            }
+
+            document.getElementById("market-gold").textContent = player.gold + "g";
+            saveGame();
+            updateUI();
+        }
+
+        function buyConsumable(itemType, cost) {
+            if (player.gold < cost) {
+                addTerminalLog(">> [MERCADO] Ouro insuficiente para consumível.", "red");
+                return;
+            }
+
+            player.gold -= cost;
+            if (itemType === 'potion-hp') {
+                player.potions.hp++;
+                addTerminalLog(`>> [MERCADO] Comprou Poção de HP por ${cost}g.`, "yellow");
+            } else if (itemType === 'potion-mp') {
+                player.potions.mp++;
+                addTerminalLog(`>> [MERCADO] Comprou Poção de MP por ${cost}g.`, "yellow");
+            }
+
+            document.getElementById("market-gold").textContent = player.gold + "g";
+            saveGame();
+            updateUI();
+        }
+
+        function buyRest(cost) {
+            if (player.gold < cost) {
+                addTerminalLog(">> [MERCADO] Ouro insuficiente para alugar um quarto.", "red");
+                return;
+            }
+
+            player.gold -= cost;
+            player.hp = player.maxHp;
+            player.mp = player.maxMp;
+            addTerminalLog(`>> [MERCADO] Você descansou nos aposentos da taverna. HP e MP totalmente restaurados!`, "yellow");
+            
+            document.getElementById("market-gold").textContent = player.gold + "g";
+            saveGame();
+            updateUI();
+        }
+
+        // TELA 6: SISTEMA DE EXPEDIDÃO DE TEMPO AUTOMÁTICA (BACKGROUND)
+        function updateExpeditionUI() {
+            // Se já tem expedição ativa, mostra
+            const btnMina = document.getElementById("btn-exp-mina");
+            const btnFlor = document.getElementById("btn-exp-floresta");
+            const btnVul = document.getElementById("btn-exp-vulcao");
+
+            if (expeditionActive) {
+                btnMina.disabled = true;
+                btnFlor.disabled = true;
+                btnVul.disabled = true;
+                document.getElementById("expedition-progress-container").classList.remove("hidden");
+            } else {
+                btnMina.disabled = false;
+                btnFlor.disabled = false;
+                btnVul.disabled = false;
+                document.getElementById("expedition-progress-container").classList.add("hidden");
+            }
+        }
+
+        function startExpedition(type, duration) {
+            if (expeditionActive) return;
+
+            expeditionActive = true;
+            let currentSec = duration;
+            updateExpeditionUI();
+
+            document.getElementById("exp-progress-title").textContent = `Expedição para ${type.toUpperCase()} iniciada...`;
+            document.getElementById("exp-timer").textContent = currentSec;
+
+            expeditionTimer = setInterval(() => {
+                currentSec--;
+                document.getElementById("exp-timer").textContent = currentSec;
+                
+                // Progresso em %
+                const percent = ((duration - currentSec) / duration) * 100;
+                document.getElementById("exp-progress-bar").style.width = `${percent}%`;
+
+                if (currentSec <= 0) {
+                    clearInterval(expeditionTimer);
+                    finishExpedition(type);
+                }
+            }, 1000);
+
+            addTerminalLog(`>> [EXPEDIÇÃO] Seus exploradores foram enviados para a expedição ${type.toUpperCase()} por ${duration}s.`);
+        }
+
+        function finishExpedition(type) {
+            expeditionActive = false;
+            updateExpeditionUI();
+
+            let goldGained = 0;
+            let expGained = 0;
+
+            if (type === 'mina') {
+                goldGained = Math.floor(Math.random() * 15) + 10;
+                expGained = Math.floor(Math.random() * 15) + 10;
+            } else if (type === 'floresta') {
+                goldGained = Math.floor(Math.random() * 40) + 30;
+                expGained = Math.floor(Math.random() * 35) + 30;
+            } else if (type === 'vulcao') {
+                goldGained = Math.floor(Math.random() * 90) + 70;
+                expGained = Math.floor(Math.random() * 80) + 70;
+            }
+
+            player.gold += goldGained;
+            addTerminalLog(`>> [EXPEDIÇÃO] Retorno de sucesso! Recursos coletados: +${goldGained}g | +${expGained} EXP!`, "yellow");
+            gainExp(expGained);
+            saveGame();
+            updateUI();
+        }
+
+        // TELA 7: SISTEMA DE EXPLORAÇÃO DE DUNGEONS DE ELITE
+        function startDungeon(dungName, levelRec, encounters) {
+            if (player.level < levelRec) {
+                const proceed = confirm(`Nível recomendado para esta Dungeon é ${levelRec}. Seu nível atual é ${player.level}. Prosseguir mesmo assim?`);
+                if (!proceed) return;
+            }
+
+            dungeonActive = true;
+            dungeonStatus = {
+                name: dungName === 'catacumbas' ? "Catacumbas Sombrias" : dungName === 'caverna' ? "Caverna dos Dragões" : "Abismo do Caos",
+                maxEncounters: encounters,
+                currentEncounter: 0,
+                enemyLevel: levelRec
+            };
+
+            addTerminalLog(`>> [DUNGEON] Você adentrou nos corredores profundos de: ${dungeonStatus.name}!`, "red");
+            addTerminalLog(`Prepare-se para enfrentar ${encounters} monstros seguidos!`);
+
+            // Começa primeiro combate de cara
+            startCombat(false);
+        }
+
+        // GESTÃO DE EXP & NÍVEL DO JOGADOR
+        function gainExp(amount) {
+            player.exp += amount;
+            while (player.exp >= player.maxExp) {
+                player.exp -= player.maxExp;
+                player.level++;
+                player.maxExp = Math.ceil(player.maxExp * 1.5);
+                
+                // Pontos extras para atributos ao subir nível
+                player.attributes.for += 1;
+                player.attributes.des += 1;
+                player.attributes.int += 1;
+                player.attributes.con += 1;
+
+                addTerminalLog(`⚡⚡ [NÍVEL UP!] Seu herói evoluiu para o Nível ${player.level}! +1 em todos os atributos base! HP/MP expandidos. ⚡⚡`, "yellow");
+                recalculateStats();
+                // Recuperação completa ao upar
+                player.hp = player.maxHp;
+                player.mp = player.maxMp;
+            }
+            updateUI();
+        }
+
+        // TELA 8: MORTE E SALVAMENTO / RESET
+        function reviveOrReload() {
+            // Recarrega o último save do jogador se houver, senão reinicia o HP com perda de gold
+            const saved = localStorage.getItem("terminal_quest_save");
+            if (saved) {
+                player = JSON.parse(saved);
+                recalculateStats();
+                player.hp = player.maxHp;
+                player.mp = player.maxMp;
+                updateUI();
+                switchScreen("hub");
+                addTerminalLog(">> [SISTEMA] Arquivo de save restaurado. Você está vivo novamente!", "yellow");
+            } else {
+                // Caso não tenha save anterior (morte no lvl 1)
+                player.hp = player.maxHp;
+                player.mp = player.maxMp;
+                player.gold = Math.max(0, player.gold - 10); // Perde ouro como penalidade
+                updateUI();
+                switchScreen("hub");
+                addTerminalLog(">> [SISTEMA] Nenhuma cópia de segurança detectada. Você foi ressuscitado com penalidade de ouro.", "yellow");
+            }
+        }
+
+        // SISTEMA DE LOGS DO TERMINAL PRINCIPAL
+        function addTerminalLog(msg, color = "") {
+            const feed = document.getElementById("terminal-feed");
+            const p = document.createElement("p");
+            p.textContent = msg;
+            
+            if (color === "red") p.className = "text-red-500 font-bold";
+            else if (color === "yellow") p.className = "text-yellow-400 font-semibold";
+            else if (color === "gray") p.className = "text-stone-500";
+            
+            feed.appendChild(p);
+            feed.scrollTop = feed.scrollHeight;
+        }
+
+        // ATUALIZADOR GLOBAL DE COMPONENTES DA INTERFACE (UI)
+        function updateUI() {
+            // Painel lateral
+            document.getElementById("char-name").textContent = player.name;
+            document.getElementById("char-class").textContent = player.class;
+            document.getElementById("char-level").textContent = player.level;
+            document.getElementById("char-exp").textContent = `${player.exp}/${player.maxExp}`;
+            
+            const expPercent = Math.min(100, (player.exp / player.maxExp) * 100);
+            document.getElementById("exp-bar").style.width = `${expPercent}%`;
+
+            document.getElementById("char-hp").textContent = `${player.hp}/${player.maxHp}`;
+            const hpPercent = Math.min(100, (player.hp / player.maxHp) * 100);
+            document.getElementById("hp-bar").style.width = `${hpPercent}%`;
+
+            document.getElementById("char-mp").textContent = `${player.mp}/${player.maxMp}`;
+            const mpPercent = Math.min(100, (player.mp / player.maxMp) * 100);
+            document.getElementById("mp-bar").style.width = `${mpPercent}%`;
+
+            document.getElementById("attr-for").textContent = player.attributes.for;
+            document.getElementById("attr-des").textContent = player.attributes.des;
+            document.getElementById("attr-int").textContent = player.attributes.int;
+            document.getElementById("attr-con").textContent = player.attributes.con;
+
+            document.getElementById("eq-weapon").textContent = `${player.equipment.weapon.name} (+${player.equipment.weapon.power} ATK)`;
+            document.getElementById("eq-armor").textContent = `${player.equipment.armor.name} (+${player.equipment.armor.defense} DEF)`;
+
+            document.getElementById("char-gold").textContent = `${player.gold}g`;
+            document.getElementById("pot-hp").textContent = player.potions.hp;
+            document.getElementById("pot-mp").textContent = player.potions.mp;
+
+            document.getElementById("battle-rank").textContent = player.battleRank;
+        }
+
+        // ALTERNADOR DE TEMAS DE CORES (VERDE NEON VS ÂMBAR CLÁSSICO)
+        function toggleTheme() {
+            const body = document.body;
+            if (body.classList.contains("amber-theme")) {
+                body.classList.remove("amber-theme");
+                addTerminalLog(">> [INTERFACE] Paleta de cores alterada para verde fósforo.");
+            } else {
+                body.classList.add("amber-theme");
+                addTerminalLog(">> [INTERFACE] Paleta de cores alterada para âmbar retrô.");
+            }
+        }
+
+        // SUPORTE AO TECLADO FÍSICO
+        function handleKeyboardInput(e) {
+            const key = e.key.toUpperCase();
+            
+            // Movimentação em mapa
+            if (currentScreen === "map") {
+                if (key === "W" || key === "A" || key === "S" || key === "D") {
+                    movePlayer(key);
+                }
+            }
+
+            // Teclas de atalho para combate
+            if (currentScreen === "combat" && activeCombat && activeCombat.playerTurn) {
+                if (key === "1") combatAction('attack');
+                if (key === "2") combatAction('defend');
+                if (key === "3") combatAction('skill');
+                if (key === "4") combatAction('potion');
+            }
+        }
+    </script>
+</body>
+</html>

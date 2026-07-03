@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chaldea Archive — Leitor de Histórias FGO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+JP:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg: #0a0c16;
+  --bg-panel: #12162a;
+  --bg-panel-2: #171c34;
+  --line: #2a3054;
+  --gold: #c9a24b;
+  --gold-dim: #8a723a;
+  --seal-red: #8b2635;
+  --text: #e9ecf7;
+  --text-dim: #9aa3c2;
+  --text-faint: #5c6389;
+  --font-display: 'Cinzel', serif;
+  --font-jp: 'Noto Serif JP', serif;
+  --font-ui: 'Inter', sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);height:100%;}
+body{
+  background:
+    radial-gradient(circle at 15% 0%, rgba(201,162,75,0.06), transparent 45%),
+    radial-gradient(circle at 85% 100%, rgba(139,38,53,0.08), transparent 50%),
+    var(--bg);
+  min-height:100vh;
+}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+/* ---------- Header ---------- */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 28px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg, rgba(18,22,42,0.9), rgba(10,12,22,0.4));
+  position:sticky;top:0;z-index:50;backdrop-filter:blur(6px);
+}
+.brand{display:flex;align-items:center;gap:14px;}
+.seal{width:34px;height:34px;flex-shrink:0;}
+.brand h1{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:0.06em;margin:0;color:var(--gold);}
+.brand span{display:block;font-size:11px;color:var(--text-faint);letter-spacing:0.15em;text-transform:uppercase;margin-top:2px;}
+
+.region-toggle{display:flex;gap:6px;background:var(--bg-panel);border:1px solid var(--line);border-radius:8px;padding:4px;}
+.region-toggle button{
+  background:transparent;border:none;color:var(--text-dim);font-family:var(--font-ui);
+  font-size:12px;font-weight:600;letter-spacing:0.05em;padding:7px 14px;border-radius:6px;cursor:pointer;
+  transition:all .15s;
+}
+.region-toggle button.active{background:var(--gold);color:#1a1305;}
+.region-toggle button:hover:not(.active){color:var(--text);}
+
+/* ---------- Layout ---------- */
+.layout{display:grid;grid-template-columns:340px 1fr;min-height:calc(100vh - 73px);}
+@media (max-width: 860px){ .layout{grid-template-columns:1fr;} .sidebar{max-height:50vh;} }
+
+.sidebar{
+  border-right:1px solid var(--line);background:rgba(18,22,42,0.4);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sidebar-section{padding:16px 18px;border-bottom:1px solid var(--line);}
+.sidebar-section h2{
+  font-family:var(--font-ui);font-size:11px;text-transform:uppercase;letter-spacing:0.14em;
+  color:var(--gold-dim);margin:0 0 10px 0;
+}
+input[type="text"]{
+  width:100%;background:var(--bg-panel);border:1px solid var(--line);color:var(--text);
+  padding:9px 12px;border-radius:6px;font-family:var(--font-ui);font-size:13px;outline:none;
+}
+input[type="text"]:focus{border-color:var(--gold-dim);}
+.list{overflow-y:auto;flex:1;min-height:0;}
+.list-scroll{max-height:220px;overflow-y:auto;margin-top:10px;}
+.item{
+  padding:9px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text-dim);
+  border:1px solid transparent;line-height:1.4;transition:all .12s;
+}
+.item:hover{background:var(--bg-panel);color:var(--text);}
+.item.selected{background:rgba(201,162,75,0.12);border-color:var(--gold-dim);color:var(--gold);}
+.item small{display:block;color:var(--text-faint);font-size:11px;margin-top:2px;}
+
+.phase-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.phase-btn{
+  background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);
+  padding:6px 12px;border-radius:5px;font-size:12px;cursor:pointer;
+}
+.phase-btn.selected{background:var(--seal-red);border-color:var(--seal-red);color:#fff;}
+.phase-btn:hover:not(.selected){border-color:var(--gold-dim);color:var(--text);}
+
+.empty-hint{color:var(--text-faint);font-size:12px;padding:6px 2px;}
+
+/* ---------- Main reading pane ---------- */
+main{padding:28px 40px 80px;overflow-y:auto;position:relative;}
+.reader-header{margin-bottom:24px;}
+.breadcrumb{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);margin-bottom:6px;}
+.reader-header h2{font-family:var(--font-display);color:var(--gold);font-size:26px;margin:0 0 4px;}
+.reader-header .sub{color:var(--text-dim);font-size:13px;}
+
+.controls-row{display:flex;gap:10px;align-items:center;margin:18px 0 26px;flex-wrap:wrap;}
+.ctrl-btn{
+  background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);
+  padding:8px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:var(--font-ui);font-weight:500;
+  display:flex;align-items:center;gap:6px;
+}
+.ctrl-btn:hover{border-color:var(--gold-dim);color:var(--text);}
+.ctrl-btn.active{background:var(--gold);color:#1a1305;border-color:var(--gold);}
+.font-size-ctrl{display:flex;gap:4px;margin-left:auto;}
+.font-size-ctrl button{
+  width:30px;height:30px;background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);
+  border-radius:6px;cursor:pointer;font-size:14px;
+}
+
+.welcome{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:80px 20px;color:var(--text-faint);
+}
+.welcome .seal-lg{width:80px;height:80px;opacity:0.5;margin-bottom:20px;}
+.welcome h3{font-family:var(--font-display);color:var(--text-dim);font-weight:500;font-size:18px;margin:0 0 8px;}
+.welcome p{max-width:420px;font-size:13px;line-height:1.6;}
+
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;color:var(--text-dim);}
+.spinner{width:46px;height:46px;animation:spin 1.8s linear infinite;margin-bottom:16px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.error-box{
+  background:rgba(139,38,53,0.12);border:1px solid var(--seal-red);border-radius:8px;
+  padding:16px 18px;color:#e8b6bd;font-size:13px;line-height:1.6;
+}
+
+/* ---------- Script transcript ---------- */
+.transcript{max-width:760px;}
+.script-block{margin-bottom:22px;position:relative;padding-left:2px;}
+.speaker-name{
+  display:inline-block;font-family:var(--font-display);font-size:13px;font-weight:600;
+  color:var(--gold);letter-spacing:0.04em;margin-bottom:6px;
+  border-bottom:1px solid var(--gold-dim);padding-bottom:2px;
+}
+.speaker-name.none{color:var(--text-faint);font-style:italic;font-family:var(--font-ui);font-weight:400;border-bottom:none;}
+.dialogue-box{
+  background:var(--bg-panel);border:1px solid var(--line);border-left:3px solid var(--gold-dim);
+  border-radius:0 8px 8px 8px;padding:14px 18px;
+}
+.dialogue-box.narration{border-left-color:var(--text-faint);font-style:italic;color:var(--text-dim);}
+.jp-text{font-family:var(--font-jp);line-height:1.9;font-size:16px;white-space:pre-wrap;}
+.translation{
+  margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
+  color:var(--text-dim);font-size:14px;line-height:1.7;white-space:pre-wrap;
+}
+.translation.loading-t{color:var(--text-faint);font-style:italic;}
+.translate-btn{
+  margin-top:8px;background:transparent;border:1px solid var(--line);color:var(--text-faint);
+  font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer;
+}
+.translate-btn:hover{border-color:var(--gold-dim);color:var(--gold);}
+
+.script-divider{
+  display:flex;align-items:center;gap:10px;margin:34px 0;color:var(--text-faint);font-size:11px;
+  text-transform:uppercase;letter-spacing:0.12em;
+}
+.script-divider::before,.script-divider::after{content:'';flex:1;height:1px;background:var(--line);}
+
+footer.credits{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--text-faint);font-size:11px;line-height:1.6;}
+footer.credits a{color:var(--gold-dim);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg class="seal" viewBox="0 0 100 100"><g fill="none" stroke="#c9a24b" stroke-width="2.5"><circle cx="50" cy="50" r="44"/><circle cx="50" cy="50" r="34"/><path d="M50 6 L50 20 M50 80 L50 94 M6 50 L20 50 M80 50 L94 50"/><path d="M50 16 A34 34 0 0 1 84 50" stroke-width="4"/><circle cx="50" cy="50" r="4" fill="#c9a24b"/></g></svg>
+    <div>
+      <h1>Chaldea Archive</h1>
+      <span>Leitor de Histórias · Fate/Grand Order</span>
+    </div>
+  </div>
+  <div class="region-toggle" id="regionToggle">
+    <button data-region="JP" class="active">JP (日本語)</button>
+    <button data-region="NA">NA (EN)</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <h2>Guerra Sagrada / Evento</h2>
+      <input type="text" id="warSearch" placeholder="Buscar guerra ou capítulo...">
+      <div class="list-scroll" id="warList"><div class="empty-hint">Carregando lista de guerras...</div></div>
+    </div>
+    <div class="sidebar-section" id="questSection" style="display:none;">
+      <h2>Quests</h2>
+      <div class="list-scroll" id="questList" style="max-height:260px;"></div>
+    </div>
+    <div class="sidebar-section" id="phaseSection" style="display:none;">
+      <h2>Capítulo (Phase)</h2>
+      <div class="phase-row" id="phaseRow"></div>
+    </div>
+  </aside>
+
+  <main>
+    <div id="mainContent">
+      <div class="welcome">
+        <svg class="seal-lg" viewBox="0 0 100 100"><g fill="none" stroke="#9aa3c2" stroke-width="2"><circle cx="50" cy="50" r="44"/><circle cx="50" cy="50" r="34"/><path d="M50 6 L50 20 M50 80 L50 94 M6 50 L20 50 M80 50 L94 50"/><circle cx="50" cy="50" r="4" fill="#9aa3c2"/></g></svg>
+        <h3>Selecione uma guerra para começar</h3>
+        <p>Escolha uma Guerra Sagrada ou evento na barra lateral, depois uma quest e o capítulo (phase) para ler a história. Prioriza texto em inglês (NA); quando não disponível, mostra o japonês original com tradução automática.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API = "https://api.atlasacademy.io";
+const state = {
+  region: "JP",
+  wars: { JP: null, NA: null },
+  selectedWar: null,
+  selectedWarRegion: null,
+  quests: [],
+  selectedQuest: null,
+  selectedPhase: null,
+};
+
+// ---------- Region toggle ----------
+document.getElementById('regionToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  document.querySelectorAll('.region-toggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.region = btn.dataset.region;
+  loadWars();
+});
+
+const warListEl = document.getElementById('warList');
+const questSection = document.getElementById('questSection');
+const questListEl = document.getElementById('questList');
+const phaseSection = document.getElementById('phaseSection');
+const phaseRowEl = document.getElementById('phaseRow');
+const mainContent = document.getElementById('mainContent');
+const warSearchEl = document.getElementById('warSearch');
+
+async function fetchJson(url){
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + url);
+  return res.json();
+}
+
+// ---------- Load war list ----------
+async function loadWars(){
+  const region = state.region;
+  warListEl.innerHTML = '<div class="empty-hint">Carregando lista de guerras...</div>';
+  questSection.style.display = 'none';
+  phaseSection.style.display = 'none';
+  try {
+    if (!state.wars[region]) {
+      const data = await fetchJson(`${API}/export/${region}/basic_war.json`);
+      state.wars[region] = data.filter(w => w.id !== 0).sort((a,b) => b.id - a.id);
+    }
+    renderWarList();
+  } catch (err) {
+    warListEl.innerHTML = `<div class="error-box">Não foi possível carregar a lista de guerras (${region}).<br>${err.message}</div>`;
+  }
+}
+
+function renderWarList(){
+  const region = state.region;
+  const filter = warSearchEl.value.trim().toLowerCase();
+  const wars = state.wars[region] || [];
+  const filtered = filter
+    ? wars.filter(w => (w.longName || w.name || '').toLowerCase().includes(filter))
+    : wars;
+  if (!filtered.length) {
+    warListEl.innerHTML = '<div class="empty-hint">Nenhuma guerra encontrada.</div>';
+    return;
+  }
+  warListEl.innerHTML = '';
+  filtered.slice(0, 300).forEach(w => {
+    const div = document.createElement('div');
+    div.className = 'item' + (state.selectedWar && state.selectedWar.id === w.id && state.selectedWarRegion === region ? ' selected' : '');
+    div.innerHTML = `${escapeHtml(w.longName || w.name || ('War ' + w.id))}<small>ID ${w.id}${w.eventId ? ' · Event ' + w.eventId : ''}</small>`;
+    div.addEventListener('click', () => selectWar(w, region));
+    warListEl.appendChild(div);
+  });
+}
+warSearchEl.addEventListener('input', renderWarList);
+
+// ---------- Select war -> load quests ----------
+async function selectWar(war, region){
+  state.selectedWar = war;
+  state.selectedWarRegion = region;
+  state.selectedQuest = null;
+  state.selectedPhase = null;
+  renderWarList();
+  questSection.style.display = 'block';
+  phaseSection.style.display = 'none';
+  questListEl.innerHTML = '<div class="empty-hint">Carregando quests...</div>';
+
+  try {
+    const data = await fetchJson(`${API}/nice/${region}/war/${war.id}?lang=en`);
+    const quests = [];
+    (data.spots || []).forEach(spot => {
+      (spot.quests || []).forEach(q => {
+        quests.push({ ...q, spotName: spot.name });
+      });
+    });
+    // also main story quests not tied to spots sometimes live directly — fallback if empty
+    state.quests = quests;
+    renderQuestList();
+  } catch (err) {
+    questListEl.innerHTML = `<div class="error-box">Erro ao carregar quests desta guerra.<br>${err.message}</div>`;
+  }
+}
+
+function renderQuestList(){
+  if (!state.quests.length) {
+    questListEl.innerHTML = '<div class="empty-hint">Esta guerra não possui quests de história listadas (pode ser um evento sem spots, ex: batalhas livres).</div>';
+    return;
+  }
+  questListEl.innerHTML = '';
+  state.quests.forEach(q => {
+    const div = document.createElement('div');
+    div.className = 'item' + (state.selectedQuest && state.selectedQuest.id === q.id ? ' selected' : '');
+    div.innerHTML = `${escapeHtml(q.name || ('Quest ' + q.id))}<small>${escapeHtml(q.spotName || '')}</small>`;
+    div.addEventListener('click', () => selectQuest(q));
+    questListEl.appendChild(div);
+  });
+}
+
+function selectQuest(q){
+  state.selectedQuest = q;
+  state.selectedPhase = null;
+  renderQuestList();
+  phaseSection.style.display = 'block';
+  const phases = q.phases && q.phases.length ? q.phases : [1];
+  phaseRowEl.innerHTML = '';
+  phases.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'phase-btn';
+    btn.textContent = 'Cap. ' + p;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.phase-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      loadStory(q, p);
+    });
+    phaseRowEl.appendChild(btn);
+  });
+  // auto-load first phase
+  phaseRowEl.firstChild.click();
+}
+
+// ---------- Load & render story ----------
+async function loadStory(quest, phase){
+  showLoading();
+  const region = state.selectedWarRegion;
+  try {
+    const questData = await fetchJson(`${API}/nice/${region}/quest/${quest.id}/${phase}?lang=en`);
+    const scripts = questData.scripts || [];
+    if (!scripts.length) throw new Error('Sem scripts de texto nesta quest/capítulo.');
+    await renderStory(questData, scripts, region);
+  } catch (err) {
+    showError(quest, phase, err);
+  }
+}
+
+function showLoading(){
+  mainContent.innerHTML = `
+    <div class="loading">
+      <svg class="spinner" viewBox="0 0 100 100"><g fill="none" stroke="#c9a24b" stroke-width="4"><circle cx="50" cy="50" r="40" stroke-dasharray="60 200"/></g></svg>
+      Invocando o registro de Chaldea...
+    </div>`;
+}
+
+function showError(quest, phase, err){
+  mainContent.innerHTML = `
+    <div class="reader-header">
+      <div class="breadcrumb">${escapeHtml(state.selectedWar.longName || '')}</div>
+      <h2>${escapeHtml(quest.name || '')}</h2>
+    </div>
+    <div class="error-box">
+      Não foi possível carregar o script deste capítulo (Cap. ${phase}).<br>
+      Isso pode significar que a quest ainda não foi lançada nessa região, ou que ela não possui diálogo em texto (ex: apenas batalha).<br>
+      ${err ? escapeHtml(err.message) : ''}
+    </div>`;
+}
+
+async function renderStory(questData, scripts, region){
+  const isJP = region === 'JP';
+  mainContent.innerHTML = `
+    <div class="reader-header">
+      <div class="breadcrumb">${escapeHtml(state.selectedWar.longName || '')} — ${isJP ? 'Japonês (JP)' : 'Inglês (NA)'}</div>
+      <h2>${escapeHtml(questData.name || '')}</h2>
+      <div class="sub">${scripts.length} cena(s) de script encontradas</div>
+    </div>
+    <div class="controls-row">
+      ${isJP ? `<button class="ctrl-btn" id="translateAllBtn">🌐 Traduzir tudo (JP → EN)</button>` : ''}
+      <div class="font-size-ctrl">
+        <button id="fontMinus">A-</button>
+        <button id="fontPlus">A+</button>
+      </div>
+    </div>
+    <div class="transcript" id="transcript"></div>
+    <footer class="credits">Dados via <a href="https://api.atlasacademy.io" target="_blank">Atlas Academy API</a>. ${isJP ? 'Tradução automática não-oficial (Google) — pode conter imprecisões.' : ''}</footer>
+  `;
+
+  const transcriptEl = document.getElementById('transcript');
+  let fontSize = 16;
+  document.getElementById('fontPlus').addEventListener('click', () => { fontSize = Math.min(fontSize+2,26); applyFontSize(fontSize); });
+  document.getElementById('fontMinus').addEventListener('click', () => { fontSize = Math.max(fontSize-2,12); applyFontSize(fontSize); });
+  function applyFontSize(sz){ transcriptEl.querySelectorAll('.jp-text').forEach(el => el.style.fontSize = sz+'px'); }
+
+  for (let i = 0; i < scripts.length; i++) {
+    const s = scripts[i];
+    if (i > 0) {
+      const div = document.createElement('div');
+      div.className = 'script-divider';
+      div.textContent = 'Cena ' + (i+1);
+      transcriptEl.appendChild(div);
+    }
+    try {
+      const res = await fetch(s.script);
+      const text = await res.text();
+      const blocks = parseScript(text);
+      renderBlocks(blocks, transcriptEl, isJP);
+    } catch (err) {
+      const div = document.createElement('div');
+      div.className = 'error-box';
+      div.textContent = 'Falha ao carregar cena ' + (i+1) + ': ' + err.message;
+      transcriptEl.appendChild(div);
+    }
+  }
+
+  if (isJP) {
+    document.getElementById('translateAllBtn').addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      e.target.textContent = 'Traduzindo...';
+      const btns = transcriptEl.querySelectorAll('.translate-btn');
+      for (const b of btns) { await b.click(); await new Promise(r => setTimeout(r, 120)); }
+      e.target.textContent = '✓ Traduzido';
+    });
+  }
+}
+
+// ---------- FGO script parser ----------
+// Heuristic parser for classic FGO scenario script format.
+function parseScript(text){
+  const lines = text.split(/\r?\n/);
+  const blocks = [];
+  let current = null;
+
+  const flush = () => { if (current && current.text.trim()) blocks.push(current); current = null; };
+
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line) { continue; }
+
+    // Speaker declaration lines: ＠Name or @Name  (may include ",faceId")
+    const speakerMatch = line.match(/^[＠@]\s*(.+)$/);
+    if (speakerMatch) {
+      flush();
+      let name = speakerMatch[1].split(/[,\uFF0C]/)[0].trim();
+      current = { speaker: name, text: '', narration: false };
+      continue;
+    }
+
+    // Command / control lines — skip (bracketed commands, labels, sound/flag directives)
+    if (/^[\[\*;$:]/.test(line)) continue;
+    if (/^[a-zA-Z]+\s/.test(line) && /^[a-zA-Z_]+\s+[-\w.\/]+/.test(line) && !/[「」]/.test(line)) {
+      // likely a bare command like "soundEffect se001" — skip
+      continue;
+    }
+
+    // Dialogue / narration text
+    let text = line.replace(/^[「]/, '').replace(/[」]$/, '');
+    if (!current) {
+      current = { speaker: null, text: '', narration: true };
+    }
+    current.text += (current.text ? '\n' : '') + text;
+  }
+  flush();
+  return blocks;
+}
+
+function renderBlocks(blocks, container, isJP){
+  if (!blocks.length) {
+    const div = document.createElement('div');
+    div.className = 'empty-hint';
+    div.textContent = '(Cena sem texto de diálogo — provavelmente apenas encenação/batalha)';
+    container.appendChild(div);
+    return;
+  }
+  blocks.forEach(b => {
+    const wrap = document.createElement('div');
+    wrap.className = 'script-block';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'speaker-name' + (b.speaker ? '' : ' none');
+    nameEl.textContent = b.speaker || 'Narração';
+    wrap.appendChild(nameEl);
+
+    const box = document.createElement('div');
+    box.className = 'dialogue-box' + (b.narration ? ' narration' : '');
+    const jp = document.createElement('div');
+    jp.className = 'jp-text';
+    jp.textContent = b.text;
+    box.appendChild(jp);
+
+    if (isJP) {
+      const tbtn = document.createElement('button');
+      tbtn.className = 'translate-btn';
+      tbtn.textContent = '🌐 Traduzir';
+      tbtn.addEventListener('click', async () => {
+        if (tbtn.dataset.done) return;
+        tbtn.textContent = 'Traduzindo...';
+        try {
+          const translated = await translateText(b.text);
+          const tdiv = document.createElement('div');
+          tdiv.className = 'translation';
+          tdiv.textContent = translated;
+          box.appendChild(tdiv);
+          tbtn.textContent = '✓ Traduzido';
+          tbtn.dataset.done = '1';
+        } catch (err) {
+          tbtn.textContent = '⚠ Falha na tradução';
+        }
+      });
+      box.appendChild(tbtn);
+    }
+
+    wrap.appendChild(box);
+    container.appendChild(wrap);
+  });
+}
+
+// ---------- Unofficial free translation endpoint ----------
+async function translateText(text){
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ja&tl=en&dt=t&q=${encodeURIComponent(text)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('translate failed');
+  const data = await res.json();
+  return data[0].map(seg => seg[0]).join('');
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// init
+loadWars();
+</script>
+</body>
+</html>

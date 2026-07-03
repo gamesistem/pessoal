@@ -134,7 +134,13 @@ main{padding:28px 40px 80px;overflow-y:auto;position:relative;}
 
 /* ---------- Script transcript ---------- */
 .transcript{max-width:760px;}
-.script-block{margin-bottom:22px;position:relative;padding-left:2px;}
+.script-block{margin-bottom:22px;position:relative;padding-left:2px;display:flex;gap:14px;align-items:flex-start;}
+.face-img{
+  width:56px;height:56px;border-radius:50%;object-fit:cover;object-position:top center;
+  border:2px solid var(--gold-dim);background:var(--bg-panel-2);flex-shrink:0;margin-top:2px;
+}
+.transcript.faces-hidden .face-img{display:none;}
+.content-col{flex:1;min-width:0;}
 .speaker-name{
   display:inline-block;font-family:var(--font-display);font-size:13px;font-weight:600;
   color:var(--gold);letter-spacing:0.04em;margin-bottom:6px;
@@ -396,6 +402,7 @@ async function renderStory(questData, scripts, region){
     </div>
     <div class="controls-row">
       ${isJP ? `<button class="ctrl-btn" id="translateAllBtn">🌐 Traduzir tudo (JP → EN)</button>` : ''}
+      <button class="ctrl-btn active" id="toggleFacesBtn">🖼️ Imagens dos personagens</button>
       <div class="font-size-ctrl">
         <button id="fontMinus">A-</button>
         <button id="fontPlus">A+</button>
@@ -411,6 +418,12 @@ async function renderStory(questData, scripts, region){
   document.getElementById('fontMinus').addEventListener('click', () => { fontSize = Math.max(fontSize-2,12); applyFontSize(fontSize); });
   function applyFontSize(sz){ transcriptEl.querySelectorAll('.jp-text').forEach(el => el.style.fontSize = sz+'px'); }
 
+  const facesBtn = document.getElementById('toggleFacesBtn');
+  facesBtn.addEventListener('click', () => {
+    const hidden = transcriptEl.classList.toggle('faces-hidden');
+    facesBtn.classList.toggle('active', !hidden);
+  });
+
   for (let i = 0; i < scripts.length; i++) {
     const s = scripts[i];
     if (i > 0) {
@@ -423,7 +436,7 @@ async function renderStory(questData, scripts, region){
       const res = await fetch(s.script);
       const text = await res.text();
       const blocks = parseScript(text);
-      renderBlocks(blocks, transcriptEl, isJP);
+      renderBlocks(blocks, transcriptEl, isJP, region);
     } catch (err) {
       const div = document.createElement('div');
       div.className = 'error-box';
@@ -483,7 +496,7 @@ function parseScript(text){
   return blocks;
 }
 
-function renderBlocks(blocks, container, isJP){
+function renderBlocks(blocks, container, isJP, region){
   if (!blocks.length) {
     const div = document.createElement('div');
     div.className = 'empty-hint';
@@ -495,10 +508,27 @@ function renderBlocks(blocks, container, isJP){
     const wrap = document.createElement('div');
     wrap.className = 'script-block';
 
+    const img = document.createElement('img');
+    img.className = 'face-img';
+    img.alt = '';
+    img.style.visibility = 'hidden';
+    wrap.appendChild(img);
+    if (b.speaker) {
+      resolveFace(b.speaker, region).then(url => {
+        if (url) { img.src = url; img.style.visibility = 'visible'; }
+        else { img.remove(); }
+      }).catch(() => img.remove());
+    } else {
+      img.remove();
+    }
+
+    const col = document.createElement('div');
+    col.className = 'content-col';
+
     const nameEl = document.createElement('div');
     nameEl.className = 'speaker-name' + (b.speaker ? '' : ' none');
     nameEl.textContent = b.speaker || 'Narração';
-    wrap.appendChild(nameEl);
+    col.appendChild(nameEl);
 
     const box = document.createElement('div');
     box.className = 'dialogue-box' + (b.narration ? ' narration' : '');
@@ -529,9 +559,41 @@ function renderBlocks(blocks, container, isJP){
       box.appendChild(tbtn);
     }
 
-    wrap.appendChild(box);
+    col.appendChild(box);
+    wrap.appendChild(col);
     container.appendChild(wrap);
   });
+}
+
+// ---------- Resolucao de imagem de rosto do personagem ----------
+const faceCache = {};
+async function resolveFace(speakerName, region){
+  const key = region + '::' + speakerName;
+  if (key in faceCache) return faceCache[key];
+  const cleanName = speakerName.replace(/[（(].*?[）)]/g, '').trim();
+  if (!cleanName || cleanName.length < 2) { faceCache[key] = null; return null; }
+  try {
+    const url = `${API}/nice/${region}/servant/search?name=${encodeURIComponent(cleanName)}&lang=en`;
+    const res = await fetch(url);
+    if (!res.ok) { faceCache[key] = null; return null; }
+    const list = await res.json();
+    if (!Array.isArray(list) || !list.length) { faceCache[key] = null; return null; }
+    const svt = list[0];
+    const faces = svt.extraAssets && svt.extraAssets.faces;
+    let faceUrl = null;
+    if (faces) {
+      const group = faces.ascension || faces.costume || faces.equip;
+      if (group) {
+        const firstKey = Object.keys(group)[0];
+        faceUrl = group[firstKey];
+      }
+    }
+    faceCache[key] = faceUrl;
+    return faceUrl;
+  } catch (err) {
+    faceCache[key] = null;
+    return null;
+  }
 }
 
 // ---------- Unofficial free translation endpoint ----------

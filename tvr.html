@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Távola Redonda – Cavaleiros em Tempo Real</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #1e1a2b;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            display: flex;
+            justify-content: center;
+            padding: 2rem 1rem;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: #2c243b;
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            color: #ede7f6;
+        }
+        h1 {
+            font-weight: 400;
+            letter-spacing: 1px;
+            font-size: 2rem;
+            border-bottom: 2px solid #6a5a7a;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        h1 small {
+            font-size: 1rem;
+            font-weight: 300;
+            color: #b8a9c9;
+            margin-left: auto;
+        }
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            background: #1f1a2b;
+            padding: 0.75rem 1rem;
+            border-radius: 40px;
+            margin-bottom: 1.8rem;
+        }
+        .status-bar .info {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .status-bar .info span {
+            background: #3d324f;
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+        }
+        .btn {
+            background: #6f5b8a;
+            border: none;
+            color: white;
+            padding: 0.4rem 1.2rem;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9rem;
+        }
+        .btn:hover {
+            background: #8a73a8;
+            transform: scale(1.02);
+        }
+        .btn:active {
+            transform: scale(0.96);
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 16px;
+            background: #1a1525;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+        th {
+            text-align: left;
+            padding: 1rem 0.8rem 0.6rem;
+            background: #231d30;
+            color: #cbb7e6;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #4d3d5e;
+        }
+        td {
+            padding: 0.8rem;
+            border-bottom: 1px solid #352b44;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .cavaleiro {
+            font-weight: 600;
+            color: #e4d5f5;
+        }
+        .nome-real {
+            font-family: 'Courier New', monospace;
+            font-weight: 500;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.15rem 0.7rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .status-assigned {
+            background: #2e7d5e;
+            color: #d0f0e0;
+        }
+        .status-pending {
+            background: #b8863a;
+            color: #ffecb3;
+        }
+        .status-empty {
+            background: #4a3a55;
+            color: #c0b0cc;
+        }
+        .loading {
+            text-align: center;
+            padding: 3rem 0;
+            color: #b8a9c9;
+        }
+        .error {
+            background: #4e2a2a;
+            color: #ffbaba;
+            padding: 1rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+        }
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: #7a6a8a;
+            text-align: center;
+        }
+        .footer a {
+            color: #a88fc9;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 1.2rem; }
+            h1 { font-size: 1.5rem; flex-wrap: wrap; }
+            .status-bar { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+            .status-bar .info { flex-wrap: wrap; gap: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>
+        🏰 Távola Redonda
+        <small>tempo real</small>
+    </h1>
+
+    <div class="status-bar">
+        <div class="info">
+            <span id="lastUpdate">⏳ carregando…</span>
+            <span id="count">0 cavaleiros</span>
+        </div>
+        <button class="btn" id="refreshBtn">⟳ Atualizar agora</button>
+    </div>
+
+    <div id="tableContainer">
+        <div class="loading">⏳ Buscando dados do repositório…</div>
+    </div>
+
+    <div class="footer">
+        Dados obtidos de <a href="https://github.com/gamesistem/pessoal/blob/main/t%C3%A1vola%20redonda.txt" target="_blank">gamesistem/pessoal/távola redonda.txt</a>
+        &bull; Atualização automática a cada 10s
+    </div>
+</div>
+
+<script>
+    (function() {
+        // URL raw do arquivo no GitHub
+        const RAW_URL = 'https://raw.githubusercontent.com/gamesistem/pessoal/main/t%C3%A1vola%20redonda.txt';
+
+        const tableContainer = document.getElementById('tableContainer');
+        const lastUpdateSpan = document.getElementById('lastUpdate');
+        const countSpan = document.getElementById('count');
+        const refreshBtn = document.getElementById('refreshBtn');
+
+        let autoUpdateInterval = null;
+        const UPDATE_INTERVAL_MS = 10000; // 10 segundos
+
+        // --- Função principal de parse e renderização ---
+        function fetchAndRender() {
+            fetch(RAW_URL)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status} – ${response.statusText}`);
+                    }
+                    return response.text();
+                })
+                .then(text => {
+                    const cavaleiros = parseText(text);
+                    renderTable(cavaleiros);
+                    updateStatus(cavaleiros.length);
+                })
+                .catch(error => {
+                    tableContainer.innerHTML = `
+                        <div class="error">
+                            ❌ Erro ao buscar o arquivo: ${error.message}<br>
+                            <small>Verifique a URL ou sua conexão com a internet.</small>
+                        </div>
+                    `;
+                    updateStatus(0, true);
+                });
+        }
+
+        // --- Parser: extrai [cavaleiro](nome real) de cada linha ---
+        function parseText(rawText) {
+            const lines = rawText.split(/\r?\n/);
+            const result = [];
+
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue; // ignora linhas vazias
+
+                // Procura padrão: [algum texto](algum texto)
+                const match = line.match(/^\[([^\]]*)\]\(([^)]*)\)$/);
+                if (match) {
+                    const cavaleiro = match[1].trim();
+                    let nomeReal = match[2].trim();
+
+                    // Se nomeReal estiver vazio → não designado
+                    // Se for "???" → designado mas não está com o resto
+                    // Senão → designado normal
+                    let status = 'assigned'; // padrão
+                    if (nomeReal === '') {
+                        status = 'empty';
+                    } else if (nomeReal === '???') {
+                        status = 'pending';
+                    }
+                    // Para exibição, mantemos o nome real como está (vazio ou ???)
+                    result.push({ cavaleiro, nomeReal, status });
+                }
+                // Ignora linhas que não casam com o padrão (pode ser cabeçalho ou comentário)
+            }
+
+            return result;
+        }
+
+        // --- Renderiza a tabela ---
+        function renderTable(cavaleiros) {
+            if (!cavaleiros || cavaleiros.length === 0) {
+                tableContainer.innerHTML = `
+                    <div style="padding: 2rem; text-align: center; color: #b8a9c9;">
+                        Nenhum cavaleiro encontrado no arquivo.
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cavaleiro</th>
+                                <th>Nome Real</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            for (let item of cavaleiros) {
+                let statusText = '';
+                let statusClass = '';
+                let nomeExibido = item.nomeReal;
+
+                switch (item.status) {
+                    case 'assigned':
+                        statusText = 'Designado';
+                        statusClass = 'status-assigned';
+                        break;
+                    case 'pending':
+                        statusText = 'Designado (não está com o resto)';
+                        statusClass = 'status-pending';
+                        nomeExibido = '???'; // exibe ??? mesmo
+                        break;
+                    case 'empty':
+                        statusText = 'Não designado';
+                        statusClass = 'status-empty';
+                        nomeExibido = '—'; // traço para vazio
+                        break;
+                    default:
+                        statusText = 'Desconhecido';
+                        statusClass = 'status-empty';
+                }
+
+                html += `
+                    <tr>
+                        <td class="cavaleiro">${escapeHtml(item.cavaleiro)}</td>
+                        <td class="nome-real">${escapeHtml(nomeExibido)}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    </tr>
+                `;
+            }
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            tableContainer.innerHTML = html;
+        }
+
+        // --- Atualiza as informações de status ---
+        function updateStatus(count, isError = false) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            lastUpdateSpan.textContent = `🕒 ${timeStr}`;
+            if (!isError) {
+                countSpan.textContent = `${count} cavaleiro${count !== 1 ? 's' : ''}`;
+            } else {
+                countSpan.textContent = '⚠️ erro';
+            }
+        }
+
+        // --- pequeno helper para escape HTML (evitar XSS) ---
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;')
+                      .replace(/'/g, '&#039;');
+        }
+
+        // --- Inicia o auto-update e trata do botão ---
+        function startAutoUpdate() {
+            // Carrega imediatamente
+            fetchAndRender();
+
+            // Limpa intervalo anterior se existir
+            if (autoUpdateInterval) {
+                clearInterval(autoUpdateInterval);
+            }
+            autoUpdateInterval = setInterval(fetchAndRender, UPDATE_INTERVAL_MS);
+        }
+
+        // Evento do botão "Atualizar agora"
+        refreshBtn.addEventListener('click', () => {
+            fetchAndRender();
+        });
+
+        // Iniciar
+        startAutoUpdate();
+
+        // Opcional: parar o intervalo quando a página for descarregada (boa prática)
+        window.addEventListener('beforeunload', () => {
+            if (autoUpdateInterval) {
+                clearInterval(autoUpdateInterval);
+            }
+        });
+    })();
+</script>
+
+</body>
+</html>

@@ -5,7 +5,7 @@
 [Percival]("Venom")
 [Tristan]("Hestis")
 [Bedivere]("Aric")
-[Kay]("???")
+[Kay]()
 [Bors]()
 [Lamorak]()
 [Geraint]()
